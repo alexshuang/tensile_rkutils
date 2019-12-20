@@ -1,0 +1,3 @@
+# RKT (replacement kernel tools)
+export RKT_HOME_DIR=$PWD
+export PATH=$PATH:$RKT_HOME_DIR/bin

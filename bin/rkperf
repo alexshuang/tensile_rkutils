@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+
+
+import argparse
+import json
+import os
+import pdb
+import numpy as np
+import pandas as pd
+
+
+def get_max_dim_size(problem_sizes):
+    max_size = 0
+    for p in problem_sizes:
+        for o in p:
+            if max_size < o:
+                max_size = o
+    return max_size
+
+
+def do_perf(problem_sizes, thory_gflops):
+    max_dim_size = get_max_dim_size(problem_sizes)
+    kernel, m, n, c, k, gflops, efficiency = [], [], [], [], [], [], []
+    for p in problem_sizes:
+        print("pef problem size: " + ', '.join(str(o) for o in p))
+        m_, n_, c_, k_ = p[:4]
+        ps_cmd = "sed -i \'/.*problemSizes\[/,/}};/s/{.*}};/{" + ', '.join(str(o) for o in p) + "}};/g\' ../source/ClientParameters.h"
+        ms_cmd = "sed -i \'s/\(.*maxSize. = \).*/\\1" + str(max_dim_size**2) + ";/g\' ../source/ClientParameters.h"
+        cc_cmd = "cmake --build . --config Release -- -j 8"
+        perf_cmd = "./client --platform-idx 0 --device-idx 0 --init-alpha 1 --init-beta 0 --init-d 0 --init-c 0 --init-a 3 --init-b 3 --c-equal-d 1 --print-valids 0 --print-max 4 --num-benchmarks 20 --num-elements-to-validate 0 --num-enqueues-per-sync 1 --num-syncs-per-benchmark 1 --use-gpu-timer 1 --sleep-percent 200 --benchmark-solutions 0"
+        m.append(m_)
+        n.append(n_)
+        c.append(c_)
+        k.append(k_)
+        ret = os.system(ps_cmd)
+        if ret != 0:
+            print("ERROR: Fail to set problem size: " + ps_cmd)
+            exit(ret)
+        ret = os.system(ms_cmd)
+        if ret != 0:
+            print("ERROR: Fail to set maxSize of A/B/C/D: " + ms_cmd)
+            exit(ret)
+        ret = os.system(cc_cmd)
+        if ret != 0:
+            exit(ret)
+        gflops_ = []
+        kernel_name = None
+        for _ in range(1):
+            res = os.popen(perf_cmd).readlines()[-1].split(' ')
+            gflops_.append(float(res[1]))
+            if kernel_name == None:
+                kernel_name = res[-1].strip()
+        gflops_max = max(gflops_)
+        print(gflops_)
+        print(gflops_max)
+        gflops.append(gflops_max)
+        efficiency.append(gflops_max / float(thory_gflops) * 100)
+        kernel.append(kernel_name)
+    return (kernel, m, n, c, k, gflops, efficiency)
+
+
+def save_file(data):
+    kernel, m, n, c, k, gflops, efficiency = data
+    df = pd.DataFrame()
+    #df['KernelName'] = np.array(kernel)
+    df['M'] = np.array(m)
+    df['N'] = np.array(n)
+    df['C'] = np.array(c)
+    df['K'] = np.array(k)
+    df['GFlops'] = np.array(gflops)
+    df['Efficiency'] = np.array(efficiency)
+    fname = kernel[0] + '.csv'
+    print("perf resoult save as " + fname)
+    df.to_csv(fname, index=False)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.description = "Replacement kernel perf tool"
+    parser.add_argument("-f", "--config", type=str, help='specify config file path')
+    parser.add_argument("-g", "--generate", type=str, help='generate generic config file')
+    args = parser.parse_args()
+
+    if not os.path.exists('run.sh'):
+        print("ERROR: Please make sure you are under the build directory: 1_BenchmarkProblems/*/00_Final/build")
+        exit(-2)
+
+    if args.generate:
+        fpath = os.getcwd() + "/" + args.generate
+        data = '{\n\t"TheoryGFlops": 93143.04,\n\t\n\t"ProblemSize": "[ [960, 1024, 1, 1024, 996, 996, 1056, 1056], [1920, 2048, 1, 2048, 1952, 1952, 2080, 2080], [3840, 4096, 1, 4096, 3872, 3872, 4128, 4128], [7680, 8192, 1, 8192, 7712, 7712, 8224, 8224] ]"\n}\n'
+        with open(fpath, "w") as fp:
+            fp.write(data)
+        print('%s Generated in %s' % (args.generate, os.getcwd()))
+        exit(0)
+
+    if not args.config:
+        print('No config file specified, please use "--help" for more details.')
+        exit(-1)
+
+    conf = json.load(open(args.config, 'r'))
+    ps = eval(conf['ProblemSize'])
+    res = do_perf(ps, conf['TheoryGFlops'])
+    save_file(res)
+

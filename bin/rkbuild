@@ -1,0 +1,32 @@
+#!/bin/bash
+
+set -e
+
+if [ ! -e "asm.sh" ]; then
+    echo "ERROR: Please make sure you are under the assembly directory: 1_BenchmarkProblems/*/00_Final/source/assembly"
+	exit -1
+fi
+
+BIN_DIR=$RKT_HOME_DIR/bin
+export LD_LIBRARY_PATH=$BIN_DIR
+
+if [ "$#" -eq "0" ]; then
+	echo "Usage: rkbuild <inc_file_path>"
+	exit -1
+fi
+
+KERNEL_FILE=`ls *.s`
+KERNEL_NAME=${KERNEL_FILE%.*}
+
+sed -i '/^.end_amd_amdgpu_hsa_metadata/,$d' $KERNEL_FILE
+echo ".end_amd_amdgpu_hsa_metadata" >> $KERNEL_FILE
+echo "" >> $KERNEL_FILE
+echo "/* kernel start from here */" >> $KERNEL_FILE
+echo "" >> $KERNEL_FILE
+cat $1 >> $KERNEL_FILE
+
+./asm.sh $KERNEL_NAME -mcpu=gfx908
+
+cd ../../build && ./run.sh
+cd -
+

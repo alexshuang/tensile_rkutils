@@ -7,17 +7,17 @@ utils support mi100 replacement kernel develop & perf, including compiler collec
 
 ---
 
-## Simple Guide
+## Usage Guide
 
 ### Setup
 - $ cd tensile_rkutils && source setup_env
 
 ### Compile
-- $ sp3cc *path/to/\*.sp3*
+- $ sp3cc <*path/to/\*.sp3*>
 
 ### Build
 - $ cd 1_BenchmarkProblems/\*/00_Final/source/assembly
-- $ rkbuild *path/to/\*.inc*
+- $ rkbuild <*path/to/\*.inc*>
 
 ### Perf
 - $ cd 1_BenchmarkProblems/\*/00_Final/build

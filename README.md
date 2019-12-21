@@ -1,9 +1,9 @@
 # Tensile Replacement Kernel Development Utils
 utils support mi100 replacement kernel develop & perf, including compiler collection, build and perf.
 
-- *sp3cc*,      compile \*.sp3 to \*.inc
-- *rkbuild*,    build \*.co with \*.inc
-- *rkperf*,     perf the kernel with various kinds of problem sizes
+- *sp3cc* &emsp; compile \*.sp3 to \*.inc
+- *rkbuild* &emsp; build \*.co with \*.inc
+- *rkperf* &emsp; perf the kernel with various kinds of problem sizes
 
 ---
 

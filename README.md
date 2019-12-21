@@ -21,7 +21,6 @@ utils support mi100 replacement kernel develop & perf, including compiler collec
 
 ### Perf
 - $ cd 1_BenchmarkProblems/\*/00_Final/build
-- $ rkperf -g conf.json
-- modify the problem size in the conf.json if you want
-- $ rkperf -f conf.json
-- *note*: the output--\*.csv can read by execl app.
+- $ rkperf -g conf.json  # Create profile
+- Modify problem sizes in conf.json
+- $ rkperf -f conf.json  # Read the output \*.csv using execl.

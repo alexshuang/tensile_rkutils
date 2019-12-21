@@ -1,9 +1,9 @@
 # Tensile Replacement Kernel Development Utils
 utils support mi100 replacement kernel develop & perf, including compiler collection, build and perf.
 
-- *sp3cc* &emsp; compile \*.sp3 to \*.inc
-- *rkbuild* &emsp; build \*.co with \*.inc
-- *rkperf* &emsp; perf the kernel with various kinds of problem sizes
+- *sp3cc*&emsp;compile \*.sp3 to \*.inc
+- *rkbuild*&emsp;build \*.co with \*.inc
+- *rkperf*&emsp;perf the kernel with various kinds of problem sizes
 
 ---
 
@@ -18,7 +18,6 @@ utils support mi100 replacement kernel develop & perf, including compiler collec
 ### Build
 - $ cd 1_BenchmarkProblems/\*/00_Final/source/assembly
 - $ rkbuild \*.inc
-- *note*: the name of kernel doesn't change if you want to build different macrotile kernel.
 
 ### Perf
 - $ cd 1_BenchmarkProblems/\*/00_Final/build

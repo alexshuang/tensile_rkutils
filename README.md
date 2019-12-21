@@ -1,9 +1,9 @@
 # Tensile Replacement Kernel Development Utils
 utils support mi100 replacement kernel develop & perf, including compiler collection, build and perf.
 
-- *sp3cc*&emsp;compile \*.sp3 to \*.inc
-- *rkbuild*&emsp;build \*.co with \*.inc
-- *rkperf*&emsp;perf the kernel with various kinds of problem sizes
+- **sp3cc**&emsp;&emsp;compile \*.sp3 to \*.inc
+- **rkbuild**&emsp;&emsp;build \*.co with \*.inc
+- **rkperf**&emsp;&emsp;perf the kernel with various kinds of problem sizes
 
 ---
 
@@ -13,14 +13,14 @@ utils support mi100 replacement kernel develop & perf, including compiler collec
 - $ cd tensile_rkutils && source setup_env
 
 ### Compile
-- $ sp3cc \*.sp3
+- $ sp3cc *path/to/\*.sp3*
 
 ### Build
 - $ cd 1_BenchmarkProblems/\*/00_Final/source/assembly
-- $ rkbuild \*.inc
+- $ rkbuild *path/to/\*.inc*
 
 ### Perf
 - $ cd 1_BenchmarkProblems/\*/00_Final/build
-- $ rkperf -g conf.json  # Create profile
+- $ rkperf -g conf.json  &emsp; # Create profile
 - Modify problem sizes in conf.json
-- $ rkperf -f conf.json  # Read the output \*.csv using execl.
+- $ rkperf -f conf.json  &emsp; # Read the output \*.csv using execl.

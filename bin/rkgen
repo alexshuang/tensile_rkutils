@@ -5,8 +5,9 @@ import argparse
 import json
 import os
 import pdb
-import numpy as np
-import pandas as pd
+#import numpy as np
+#import pandas as pd
+from pathlib import Path
 
 
 def get_max_dim_size(problem_sizes):
@@ -74,12 +75,18 @@ def save_file(data):
     df.to_csv(fname, index=False)
 
 
-def write_line(s, fp, tab=0):
+def write_line(fp, s='', tab=0):
     pre_s = '  ' * tab
-    fp.writeline(pre_s + s)
+    fp.write(pre_s + s + '\n')
 
     
-def def_regs()
+def def_regs(conf, fp):
+    for k in ['sregs', 'vregs']:
+        write_line(fp, "// %s define" % k)
+        for _, o in conf[k].items():
+            write_line(fp, 'var ' + o['name'] + ' = ' + str(o['value']))
+        write_line(fp)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -93,10 +100,9 @@ if __name__ == "__main__":
         exit(-1)
 
     if not args.output:
-        out_fpath = Path(args.config).stem() + '.sp3'
+        out_fpath = Path(args.config).stem + '.sp3'
 
-    
-    conf = json.load(open(args.config, 'r'))
-    res = def_regs(conf, out=out_fpath)
-    save_file(res)
+    conf_dict = json.load(open(args.config, 'r'))
+    with open(out_fpath, 'w') as fp:
+        def_regs(conf_dict, fp)
 

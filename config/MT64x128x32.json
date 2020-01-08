@@ -1,5 +1,5 @@
 {
-    "sreg": {
+    "sregs": {
         "sgprKernArgAddress": { "name": "sgprKernArgAddress", "value": 0 },
         "sgprWorkGroup0": { "name": "sgprWorkGroup0", "value": 2 },
         "sgprWorkGroup1": { "name": "sgprWorkGroup1", "value": 3 },
@@ -46,7 +46,7 @@
         "hw_id": { "name": "hw_id", "value": 80 },
         "sgprFetchSubGrpId": { "name": "sgprFetchSubGrpId", "value": 82 }
     },
-    "vreg": {
+    "vregs": {
         "vgprValuC": { "name": "vgprValuC", "value": 0 },
         "vgprAcc": { "name": "vgprAcc", "value": 0 },
         "vgprValuA_X0_I0": { "name": "vgprValuA_X0_I0", "value": 32 },

@@ -75,17 +75,109 @@ def save_file(data):
     df.to_csv(fname, index=False)
 
 
-def write_line(fp, s='', tab=0):
+def write_line(fp, s='', cmt='', tab=0):
     pre_s = '  ' * tab
-    fp.write(pre_s + s + '\n')
+    if cmt != '':
+        if not cmt.startswith('//'):
+            cmt = '// ' + cmt
+        cmt = '\t\t' + cmt
+    fp.write(pre_s + s + cmt + '\n')
 
-    
+
+def write_comments(fp, s, bar_len=40, nl=False):
+    bar = '/' + '*' * bar_len + '/\n'
+    s = '/*' + s + '*/\n'
+    fp.write(bar)
+    fp.write(s)
+    fp.write(bar)
+    if nl:
+        fp.write('\n')
+
+
+def def_var(fp, name, val, cmt='', nl=False):
+    val = str(val)
+    write_line(fp, 'var ' + name + ' = ' + val, cmt)
+    if nl:
+        write_line(fp)
+
+
 def def_regs(conf, fp):
     for k in ['sregs', 'vregs']:
         write_line(fp, "// %s define" % k)
         for _, o in conf[k].items():
-            write_line(fp, 'var ' + o['name'] + ' = ' + str(o['value']))
+            def_var(fp, o['name'], o['value'])
         write_line(fp)
+
+    write_comments(fp, '2GB limit - set offsets to -1 to exceed this and clamp')
+    def_var(fp, 'BufferLimit', 0x80000000, nl=True)
+    write_comments(fp, 'Bits 127:96 of SRD.  Set DataFormat = 32 bit')
+    def_var(fp, 'Srd127_96', 0x0020000, nl=True)
+    def_var(fp, 'roundMaskVal', 0xffff0000, nl=True)
+
+
+def def_lds_vars(conf, fp):
+    pad = conf['mfma']['pad']
+    mt_h = conf['mt']['h']
+    mt_w = conf['mt']['w']
+    simd = conf['mfma']['simd']
+
+    a_per_wr = 256 + pad
+    lvca = 32 / (conf['glvw'] * 2)
+    rows_per_wave = mt_h / simd
+    a_vw = rows_per_wave / (64 / lvca)
+
+    b_per_wr = 256 + pad
+    lvcb = 32 / (conf['glvw'] * 2)
+    cols_per_wave = mt_w / simd
+    b_vw = cols_per_wave / (64 / lvcb)
+
+    conf['lvca'] = lvca
+    conf['lvcb'] = lvcb
+    conf['a_vw'] = a_vw
+    conf['b_vw'] = b_vw
+
+    write_line(fp, "// lds vars define")
+    def_var(fp, 'varlds_pad', pad)
+    def_var(fp, 'varlds_Asize_per_wr', a_per_wr, '256 + varlds_pad')
+    def_var(fp, 'varlds_Asize_per_wave', 'varlds_Asize_per_wr * %d' % a_vw, 'vw == %d' % a_vw)
+    def_var(fp, 'varlds_Asize_per_wg', 'varlds_Asize_per_wave * %d' % simd)
+    write_line(fp)
+
+    def_var(fp, 'varlds_Bsize_per_wr', b_per_wr, '256 + varlds_pad')
+    def_var(fp, 'varlds_Bsize_per_wave', 'varlds_Bsize_per_wr * %d' % b_vw, 'vw == %d' % b_vw)
+    def_var(fp, 'varlds_Bsize_per_wg', 'varlds_Bsize_per_wave * %d' % simd)
+    write_line(fp)
+
+    def_var(fp, 'varA_lds_base_addr', 0)
+    def_var(fp, 'varB_lds_base_addr', 'varA_lds_base_addr + varlds_Asize_per_wg * 2')
+    write_line(fp)
+
+
+def def_start(conf, fp):
+    write_line(fp, '\nshader main')
+    write_line(fp, 'user_sgpr_count(14)', tab=1)
+    write_line(fp, 'tgid_x_en(1)', tab=1)
+    write_line(fp, 'tgid_y_en(1)', tab=1)
+    write_line(fp, 'tgid_z_en(1)', tab=1)
+    write_line(fp, 'tidig_comp_cnt(2)', tab=1)
+    write_line(fp)
+
+
+def def_end(conf, fp):
+    write_line(fp, 'label_end:')
+    write_line(fp, 's_waitcnt 0', tab=1)
+    write_line(fp, 's_endpgm', tab=1)
+    write_line(fp)
+    write_line(fp, 'end')
+    write_line(fp)
+
+
+def load_kargs(conf, fp):
+
+
+def def_fetch(conf, fp):
+    # load A & B address, strideI/J/IK/JK
+    load_kargs()
 
 
 if __name__ == "__main__":
@@ -102,7 +194,12 @@ if __name__ == "__main__":
     if not args.output:
         out_fpath = Path(args.config).stem + '.sp3'
 
-    conf_dict = json.load(open(args.config, 'r'))
+    conf = json.load(open(args.config, 'r'))
     with open(out_fpath, 'w') as fp:
-        def_regs(conf_dict, fp)
+        def_regs(conf, fp)
+        def_lds_vars(conf, fp)
+        def_start(conf, fp)
+        def_fetch(conf, fp)
+        #def_mac(conf, fp)
+        def_end(conf, fp)
 

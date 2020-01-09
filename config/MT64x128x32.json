@@ -46,6 +46,7 @@
         "hw_id": { "name": "hw_id", "value": 80 },
         "sgprFetchSubGrpId": { "name": "sgprFetchSubGrpId", "value": 82 }
     },
+
     "vregs": {
         "vgprValuC": { "name": "vgprValuC", "value": 0 },
         "vgprAcc": { "name": "vgprAcc", "value": 0 },
@@ -64,5 +65,20 @@
         "vgprGlobalWriteOfvarC": { "name": "vgprGlobalWriteOfvarC", "value": 104 },
         "vgprTmp": { "name": "vgprTmp", "value": 106 }
     },
-    "lds_pad": 8
+
+    "mfma": {
+        "simd": 4,
+        "m": 32,
+        "n": 32,
+        "k": 4,
+        "blocks": 2,
+        "pad": 8
+    },
+
+    "glvw": 1,
+    "mt": {
+        "h": 64,
+        "w": 128
+    },
+    "k": 32
 }

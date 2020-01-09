@@ -9,6 +9,8 @@ import pdb
 #import pandas as pd
 from pathlib import Path
 
+cur_tab = 0
+
 
 def get_max_dim_size(problem_sizes):
     max_size = 0
@@ -84,12 +86,16 @@ def write_line(fp, s='', cmt='', tab=0):
     fp.write(pre_s + s + cmt + '\n')
 
 
-def write_comments(fp, s, bar_len=40, nl=False):
-    bar = '/' + '*' * bar_len + '/\n'
-    s = '/*' + s + '*/\n'
-    fp.write(bar)
+def write_comments(fp, s, bar=False, bar_len=40, nl=False, tab=0):
+    pre_s = '  ' * tab
+    if bar:
+        bar_s = pre_s + '/' + '*' * bar_len + '/\n'
+    s = pre_s + '/*' + s + '*/\n' if bar else pre_s + '// ' + s + '\n'
+    if bar:
+        fp.write(bar_s)
     fp.write(s)
-    fp.write(bar)
+    if bar:
+        fp.write(bar_s)
     if nl:
         fp.write('\n')
 
@@ -104,8 +110,8 @@ def def_var(fp, name, val, cmt='', nl=False):
 def def_regs(conf, fp):
     for k in ['sregs', 'vregs']:
         write_line(fp, "// %s define" % k)
-        for _, o in conf[k].items():
-            def_var(fp, o['name'], o['value'])
+        for k, v in conf[k].items():
+            def_var(fp, k, v)
         write_line(fp)
 
     write_comments(fp, '2GB limit - set offsets to -1 to exceed this and clamp')
@@ -116,25 +122,23 @@ def def_regs(conf, fp):
 
 
 def def_lds_vars(conf, fp):
+    # calc index per thread
     pad = conf['mfma']['pad']
     mt_h = conf['mt']['h']
     mt_w = conf['mt']['w']
     simd = conf['mfma']['simd']
-
     a_per_wr = 256 + pad
     lvca = 32 / (conf['glvw'] * 2)
     rows_per_wave = mt_h / simd
     a_vw = rows_per_wave / (64 / lvca)
-
+    a_per_wave = a_per_wr * a_vw
+    a_per_wg = a_per_wave * simd
     b_per_wr = 256 + pad
     lvcb = 32 / (conf['glvw'] * 2)
     cols_per_wave = mt_w / simd
     b_vw = cols_per_wave / (64 / lvcb)
-
-    conf['lvca'] = lvca
-    conf['lvcb'] = lvcb
-    conf['a_vw'] = a_vw
-    conf['b_vw'] = b_vw
+    b_per_wave = b_per_wr * b_vw
+    b_per_wg = b_per_wave * simd
 
     write_line(fp, "// lds vars define")
     def_var(fp, 'varlds_pad', pad)
@@ -142,15 +146,24 @@ def def_lds_vars(conf, fp):
     def_var(fp, 'varlds_Asize_per_wave', 'varlds_Asize_per_wr * %d' % a_vw, 'vw == %d' % a_vw)
     def_var(fp, 'varlds_Asize_per_wg', 'varlds_Asize_per_wave * %d' % simd)
     write_line(fp)
-
     def_var(fp, 'varlds_Bsize_per_wr', b_per_wr, '256 + varlds_pad')
     def_var(fp, 'varlds_Bsize_per_wave', 'varlds_Bsize_per_wr * %d' % b_vw, 'vw == %d' % b_vw)
     def_var(fp, 'varlds_Bsize_per_wg', 'varlds_Bsize_per_wave * %d' % simd)
     write_line(fp)
-
     def_var(fp, 'varA_lds_base_addr', 0)
     def_var(fp, 'varB_lds_base_addr', 'varA_lds_base_addr + varlds_Asize_per_wg * 2')
     write_line(fp)
+
+    conf['lvca'] = lvca
+    conf['lvcb'] = lvcb
+    conf['a_vw'] = a_vw
+    conf['b_vw'] = b_vw
+    conf['varlds_Asize_per_wr'] = a_per_wr
+    conf['varlds_Asize_per_wave'] = a_per_wave
+    conf['varlds_Asize_per_wg'] = a_per_wg
+    conf['varlds_Bsize_per_wr'] = b_per_wr
+    conf['varlds_Bsize_per_wave'] = b_per_wave
+    conf['varlds_Bsize_per_wg'] = b_per_wg
 
 
 def def_start(conf, fp):
@@ -172,13 +185,62 @@ def def_end(conf, fp):
     write_line(fp)
 
 
-def load_kargs(conf, fp):
+def s_buff_load(fp, dest, base, off, dw=4):
+    s = 's_load_dword%s s[%s%s], s[%s:%s+3], 0x%x' % ('x' + str(dw) if dw > 1 else '',
+            dest, ':%s+%d' % (dest, dw - 1) if dw > 1 else '',
+            base, base, off)
+    write_line(fp, s, tab=1)
+
+
+def buff_load(fp, dest, base, off, dw=4):
+    s = 'load_dword%s v[%s%s], v[%s:%s+3], 0x%x' % ('x' + str(dw) if dw > 1 else '',
+            dest, ':%s+%d' % (dest, dw - 1) if dw > 1 else '',
+            base, base, off)
+    write_line(fp, s, tab=1)
+
+
+def sv_buff_load(fp, reg, dest, src, off, dw=4, lds=0):
+    s = '%s_load_dword%s %s[%s%s], %s[%s:%s+3]' % (reg, 'x' + str(dw) if dw > 1 else '',
+            reg, dest, ':%s+%d' % (dest, dw - 1) if dw > 1 else '',
+            reg, src, src)
+    off_s = ', 0 offen:1 lds:%d offset:%d' % (lds, off) if reg == 'v' else ', 0x%x' % off
+    write_line(fp, s + off_s, tab=1)
+
+
+def reg_str(s)
+    return 'v[' + s + ']' if s.startswith('vgpr') else 's[' + s + ']'
+
+
+def load_karg(conf, fp, var, dw=1):
+    s_buff_load(fp, var, 'sgprKernArgAddress', conf['kargs'][var], dw=dw)
+    return reg_str(var)
+
+
+def get_tidx(conf, fp, var, tab=1):
+    write_line(fp, 'v_mov_b32\tv[%s], v0' % var, tab=tab)
+    return reg_str(var)
 
 
 def def_fetch(conf, fp):
-    # load A & B address, strideI/J/IK/JK
-    load_kargs()
+    # load A/B address, stridesA/B, sgprTensor2dSizeA/B, size L
+    addrA = load_karg(conf, fp, 'sgprAddressA', 4)
+    strideA = load_karg(conf, fp, 'sgprStridesA', 4)
+    load_karg(conf, fp, 'sgprTensor2dSizeA', 4)
+    load_karg(conf, fp, 'sgprSizesSum')
+    write_line(fp)
 
+    #vgprSerial    holds threadIdx
+    #vgprSerial+1  holds WaveFrontId (0-63)
+    #vgprSerial+2  holds threadIdy  (simd= 0,1,2,3)
+    #vgprSerial+3  holds threadIdZ  (wave0 =0 wave1 = 1)
+
+    #HW_ID_REG
+    #bit[0-3] #waveId
+    #bit[5-4] #simdId
+    #bit[11-8] #CuId
+
+    tidx = get_tidx(conf, fp, 'vgprSerial')
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

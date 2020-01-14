@@ -185,10 +185,9 @@ def def_end(conf, fp):
     write_line(fp)
 
 
-def s_buff_load(fp, dest, base, off, dw=4):
-    s = 's_load_dword%s s[%s%s], s[%s:%s+3], 0x%x' % ('x' + str(dw) if dw > 1 else '',
-            dest, ':%s+%d' % (dest, dw - 1) if dw > 1 else '',
-            base, base, off)
+def s_buff_load(fp, dest, base, off, dw=1):
+    s = 's_load_dword%s %s, %s, 0x%x' % ('x' + str(dw) if dw > 1 else '',
+            reg_str(dest, end_off=3), reg_str(base, end_off=1), off)
     write_line(fp, s, tab=1)
 
 
@@ -207,26 +206,31 @@ def sv_buff_load(fp, reg, dest, src, off, dw=4, lds=0):
     write_line(fp, s + off_s, tab=1)
 
 
-def reg_str(s)
+def reg_str(s, start_off=None, end_off=None):
+    if start_off:
+        s = s + '+' + start_off 
+    if end_off:
+        s = s + ':%s+%d' % (s, end_off)
     return 'v[' + s + ']' if s.startswith('vgpr') else 's[' + s + ']'
 
 
+# load kernel args to sgpr
 def load_karg(conf, fp, var, dw=1):
     s_buff_load(fp, var, 'sgprKernArgAddress', conf['kargs'][var], dw=dw)
     return reg_str(var)
 
 
 def get_tidx(conf, fp, var, tab=1):
-    write_line(fp, 'v_mov_b32\tv[%s], v0' % var, tab=tab)
-    return reg_str(var)
+    write_line(fp, 'v_mov_b32\t%s, v0' % reg_str(var), tab=tab)
+    return var
 
 
 def def_fetch(conf, fp):
     # load A/B address, stridesA/B, sgprTensor2dSizeA/B, size L
     addrA = load_karg(conf, fp, 'sgprAddressA', 4)
     strideA = load_karg(conf, fp, 'sgprStridesA', 4)
-    load_karg(conf, fp, 'sgprTensor2dSizeA', 4)
-    load_karg(conf, fp, 'sgprSizesSum')
+    t2d_sizeA = load_karg(conf, fp, 'sgprTensor2dSizeA', 4)
+    size_sum = load_karg(conf, fp, 'sgprSizesSum')
     write_line(fp)
 
     #vgprSerial    holds threadIdx

@@ -8,6 +8,7 @@ import pdb
 #import numpy as np
 #import pandas as pd
 from pathlib import Path
+from functools import partial
 
 cur_tab = 0
 
@@ -207,6 +208,8 @@ def sv_buff_load(fp, reg, dest, src, off, dw=4, lds=0):
 
 
 def reg_str(s, start_off=None, end_off=None):
+    if not s.startswith('vgpr') and not s.startswith('sgpr'):
+        return 's[' + s + ']'
     if start_off:
         s = s + '+' + start_off 
     if end_off:
@@ -217,12 +220,75 @@ def reg_str(s, start_off=None, end_off=None):
 # load kernel args to sgpr
 def load_karg(conf, fp, var, dw=1):
     s_buff_load(fp, var, 'sgprKernArgAddress', conf['kargs'][var], dw=dw)
-    return reg_str(var)
+    return var
 
 
-def get_tidx(conf, fp, var, tab=1):
+def get_tid_x(fp, var, tab=1):
     write_line(fp, 'v_mov_b32\t%s, v0' % reg_str(var), tab=tab)
     return var
+
+
+def get_tid_wave(fp, var, tab=1):
+    write_line(fp, 'v_and_b32\t%s, 0x3f, v0' % reg_str(var), tab=tab)
+    return var
+
+
+def camp_lds(fp, sz, tab=1):
+    write_line(fp, 'v_mov_b32\tm0, 0x%x' % sz, tab=tab)
+
+
+def get_wave_front_id(fp, wid, tid, tab=1):
+    write_line(fp, 'v_lshrrev_b32\t%s, 6, %s' %
+            (reg_str(wid), reg_str(var)), tab=tab)
+    return wid
+
+
+def get_hw_id(fp, simd_id, wave_id, cu_id=None, tab=1):
+    #HW_ID_REG
+    #bit[0-3] #waveId
+    #bit[5-4] #simdId
+    #bit[11-8] #CuId
+    write_line(fp, 's_getreg_b32\ts[hw_id], hwreg(HW_REG_HW_ID)', tab=tab)
+    write_line(fp, 'v_and_b32\tv4, 0x30, s[hw_id]', tab=tab)
+    write_line(fp, 'v_lshrrev_b32\t%s, 4, v4' % reg_str(simd_id), tab=tab)
+    write_line(fp, 'v_and_b32\t%s, 0xf, s[hw_id]' % reg_str(wave_id), tab=tab)
+    return (simd_id, wave_id)
+
+
+def get_threadIds(conf, fp):
+    #vgprSerial    holds threadIdx
+    #vgprSerial+1  holds WaveFrontId (0-63)
+    #vgprSerial+2  holds threadIdy  (simd= 0,1,2,3)
+    #vgprSerial+3  holds threadIdZ  (wave0 =0 wave1 = 1)
+    tid = get_tid_x(fp, 'vgprSerial')
+    tid_of_wave = get_tid_wave(fp, 'vgprSerial+1')
+    #wfid = get_wave_front_id(fp, 'v2', tid) # 0-3
+    (simd_id, wave_id) = get_hw_id(fp, 'vgprSerial+2', 'vgprSerial+3') 
+
+    conf['tid'] = tid
+    conf['tid_of_wave'] = tid_of_wave
+    conf['simd_id'] = simd_id
+    conf['wave_id'] = wave_id
+
+    write_line(fp)
+
+
+def vgpr2sgpr(fp, dest, src, tab=1):
+    write_line(fp, 'v_readfirstlane_b32\t%s, %s' % (reg_str(dest), reg_str(src)), tab=tab)
+
+
+def create_branch(fp, label, var, val, tab=1, eq=False):
+    tmp = 'hw_id+1'
+    wid = vgpr2sgpr(fp, tmp, var)
+    write_line(fp, 's_cmp_eq_u32\t%s, %d' % (reg_str(tmp), val), tab=tab)
+    cmp_instr = 's_cbranch_scc1' if eq else 's_cbranch_scc0'
+    write_line(fp, '%s\t%s' % (cmp_instr, label), tab=tab)
+    write_line(fp)
+
+
+def wait_lgkmcnt(fp, cnt, tab=1):
+    write_line(fp, 's_waitcnt\tlgkmcnt(%d)' % cnt, tab=tab)
+    write_line(fp)
 
 
 def def_fetch(conf, fp):
@@ -231,20 +297,45 @@ def def_fetch(conf, fp):
     strideA = load_karg(conf, fp, 'sgprStridesA', 4)
     t2d_sizeA = load_karg(conf, fp, 'sgprTensor2dSizeA', 4)
     size_sum = load_karg(conf, fp, 'sgprSizesSum')
+    addrB = addrA + '+2'
+    strideB = strideA + '+2'
+    t2d_sizeB = t2d_sizeA + '+2'
     write_line(fp)
 
-    #vgprSerial    holds threadIdx
-    #vgprSerial+1  holds WaveFrontId (0-63)
-    #vgprSerial+2  holds threadIdy  (simd= 0,1,2,3)
-    #vgprSerial+3  holds threadIdZ  (wave0 =0 wave1 = 1)
+    # set lds max size to 0x3000
+    camp_lds(fp, 0x3000)
 
-    #HW_ID_REG
-    #bit[0-3] #waveId
-    #bit[5-4] #simdId
-    #bit[11-8] #CuId
+    # git threadIdx/y/z, waveid, simdid...
+    get_threadIds(conf, fp)
 
-    tidx = get_tidx(conf, fp, 'vgprSerial')
+    create_branch(fp, 'wave0_MAC', 'vgprSerial+3', 1)
+
+    # wait for load kern args
+    wait_lgkmcnt(fp, 0)
     
+
+def init_accvgpr(fp, i, tab=1):
+    write_line(fp, 'v_accvgpr_write\t%s, 0, 0' % reg_str('vgprAcc', start_off=i), tab=tab)
+
+
+def for_loop(ends, func_list, start=0, idxs='i,j,k,l,m,n'):
+    idxs = idxs.split(',')
+    tab = 0
+    for i, k in enumerate(ends):
+        idx = idxs[i]
+        tab += 1
+        write_line(fp, 'for var %s = 0; %s < %d; %s++' % (idx, idx, k, idx), tab=tab)
+        for o in func_list: o(tab=tab+1)
+        write_line(fp, 'end', tab=tab)
+    write_line(fp)
+
+
+def def_mac(conf, fp):
+    write_line(fp, 'wave0_MAC:')
+    write_line(fp)
+    write_comments(fp, 'hide all memory  load (kern args load) latency with ACC VGPR initialization', tab=1)
+    for_loop([32], [partial(init_accvgpr, fp, 'i')])
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -266,6 +357,6 @@ if __name__ == "__main__":
         def_lds_vars(conf, fp)
         def_start(conf, fp)
         def_fetch(conf, fp)
-        #def_mac(conf, fp)
+        def_mac(conf, fp)
         def_end(conf, fp)
 

@@ -167,8 +167,9 @@ def def_lds_vars(conf, fp):
     conf['varlds_Bsize_per_wg'] = b_per_wg
 
 
-def def_start(conf, fp):
+def def_header(conf, fp):
     write_line(fp, '\nshader main')
+    write_line(fp, 'type(CS)', tab=1)
     write_line(fp, 'user_sgpr_count(14)', tab=1)
     write_line(fp, 'tgid_x_en(1)', tab=1)
     write_line(fp, 'tgid_y_en(1)', tab=1)
@@ -177,7 +178,7 @@ def def_start(conf, fp):
     write_line(fp)
 
 
-def def_end(conf, fp):
+def def_foot(conf, fp):
     write_line(fp, 'label_end:')
     write_line(fp, 's_waitcnt 0', tab=1)
     write_line(fp, 's_endpgm', tab=1)
@@ -186,9 +187,20 @@ def def_end(conf, fp):
     write_line(fp)
 
 
+def reg_str(s, start_off=None, end_off=None):
+    if not s.startswith('vgpr') and not s.startswith('sgpr'):
+        return 's[' + s + ']'
+    if start_off:
+        s = s + '+' + start_off 
+    if end_off:
+        s = s + ':%s+%d' % (s, end_off)
+    return 'v[' + s + ']' if s.startswith('vgpr') else 's[' + s + ']'
+
+
 def s_buff_load(fp, dest, base, off, dw=1):
     s = 's_load_dword%s %s, %s, 0x%x' % ('x' + str(dw) if dw > 1 else '',
-            reg_str(dest, end_off=3), reg_str(base, end_off=1), off)
+            reg_str(dest, end_off=(dw-1 if dw > 1 else None)),
+            reg_str(base, end_off=1), off)
     write_line(fp, s, tab=1)
 
 
@@ -205,16 +217,6 @@ def sv_buff_load(fp, reg, dest, src, off, dw=4, lds=0):
             reg, src, src)
     off_s = ', 0 offen:1 lds:%d offset:%d' % (lds, off) if reg == 'v' else ', 0x%x' % off
     write_line(fp, s + off_s, tab=1)
-
-
-def reg_str(s, start_off=None, end_off=None):
-    if not s.startswith('vgpr') and not s.startswith('sgpr'):
-        return 's[' + s + ']'
-    if start_off:
-        s = s + '+' + start_off 
-    if end_off:
-        s = s + ':%s+%d' % (s, end_off)
-    return 'v[' + s + ']' if s.startswith('vgpr') else 's[' + s + ']'
 
 
 # load kernel args to sgpr
@@ -234,7 +236,7 @@ def get_tid_wave(fp, var, tab=1):
 
 
 def camp_lds(fp, sz, tab=1):
-    write_line(fp, 'v_mov_b32\tm0, 0x%x' % sz, tab=tab)
+    write_line(fp, 's_mov_b32\tm0, 0x%x' % sz, tab=tab)
 
 
 def get_wave_front_id(fp, wid, tid, tab=1):
@@ -355,8 +357,8 @@ if __name__ == "__main__":
     with open(out_fpath, 'w') as fp:
         def_regs(conf, fp)
         def_lds_vars(conf, fp)
-        def_start(conf, fp)
+        def_header(conf, fp)
         def_fetch(conf, fp)
         def_mac(conf, fp)
-        def_end(conf, fp)
+        def_foot(conf, fp)
 

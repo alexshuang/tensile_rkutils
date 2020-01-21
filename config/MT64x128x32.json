@@ -43,7 +43,7 @@
         "sgprScalarGlobalReadOffsetB": 74,
         "sgprLocalWriteAddrA": 76,
         "sgprLocalWriteAddrB": 78,
-        "hw_id": 80,
+        "sgprHWID": 80,
         "sgprFetchSubGrpId": 82
     },
 

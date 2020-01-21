@@ -91,7 +91,7 @@ def write_comments(fp, s, bar=False, bar_len=40, nl=False, tab=0):
     pre_s = '  ' * tab
     if bar:
         bar_s = pre_s + '/' + '*' * bar_len + '/\n'
-    s = pre_s + '/*' + s + '*/\n' if bar else pre_s + '// ' + s + '\n'
+    s = pre_s + '/* ' + s + ' */\n' if bar else pre_s + '// ' + s + '\n'
     if bar:
         fp.write(bar_s)
     fp.write(s)
@@ -118,7 +118,7 @@ def def_regs(conf, fp):
     write_comments(fp, '2GB limit - set offsets to -1 to exceed this and clamp')
     def_var(fp, 'BufferLimit', 0x80000000, nl=True)
     write_comments(fp, 'Bits 127:96 of SRD.  Set DataFormat = 32 bit')
-    def_var(fp, 'Srd127_96', 0x0020000, nl=True)
+    def_var(fp, 'Srd127_96', 0x20000, nl=True)
     def_var(fp, 'roundMaskVal', 0xffff0000, nl=True)
 
 
@@ -188,13 +188,18 @@ def def_foot(conf, fp):
 
 
 def reg_str(s, start_off=None, end_off=None):
-    if not s.startswith('vgpr') and not s.startswith('sgpr'):
-        return 's[' + s + ']'
-    if start_off:
-        s = s + '+' + start_off 
-    if end_off:
-        s = s + ':%s+%d' % (s, end_off)
-    return 'v[' + s + ']' if s.startswith('vgpr') else 's[' + s + ']'
+    if isinstance(s, int) or (isinstance(s, str) and s[0].isdigit()):
+        return s
+    off = (start_off, end_off)
+    if isinstance(s, tuple):
+        s, *off = s
+    dtype = 'v' if s.startswith('vgpr') else 's'
+    vname = s
+    if off[0]:
+        s = '%s+%s' % (s, off[0])
+    if len(off) > 1 and off[1]:
+        s = '%s:%s+%s' % (s, vname, off[1])
+    return dtype + '[' + s + ']'
 
 
 def s_buff_load(fp, dest, base, off, dw=1):
@@ -230,8 +235,8 @@ def get_tid_x(fp, var, tab=1):
     return var
 
 
-def get_tid_wave(fp, var, tab=1):
-    write_line(fp, 'v_and_b32\t%s, 0x3f, v0' % reg_str(var), tab=tab)
+def get_tid_subgrp(fp, var, grp_sz, tab=1):
+    write_line(fp, 'v_and_b32\t%s, %d, v0' % (reg_str(var), grp_sz), tab=tab)
     return var
 
 
@@ -250,10 +255,10 @@ def get_hw_id(fp, simd_id, wave_id, cu_id=None, tab=1):
     #bit[0-3] #waveId
     #bit[5-4] #simdId
     #bit[11-8] #CuId
-    write_line(fp, 's_getreg_b32\ts[hw_id], hwreg(HW_REG_HW_ID)', tab=tab)
-    write_line(fp, 'v_and_b32\tv4, 0x30, s[hw_id]', tab=tab)
+    write_line(fp, 's_getreg_b32\ts[sgprHWID], hwreg(HW_REG_HW_ID)', tab=tab)
+    write_line(fp, 'v_and_b32\tv4, 0x30, s[sgprHWID]', tab=tab)
     write_line(fp, 'v_lshrrev_b32\t%s, 4, v4' % reg_str(simd_id), tab=tab)
-    write_line(fp, 'v_and_b32\t%s, 0xf, s[hw_id]' % reg_str(wave_id), tab=tab)
+    write_line(fp, 'v_and_b32\t%s, 0xf, s[sgprHWID]' % reg_str(wave_id), tab=tab)
     return (simd_id, wave_id)
 
 
@@ -263,12 +268,12 @@ def get_threadIds(conf, fp):
     #vgprSerial+2  holds threadIdy  (simd= 0,1,2,3)
     #vgprSerial+3  holds threadIdZ  (wave0 =0 wave1 = 1)
     tid = get_tid_x(fp, 'vgprSerial')
-    tid_of_wave = get_tid_wave(fp, 'vgprSerial+1')
+    tid_of_subgrp = get_tid_subgrp(fp, 'vgprSerial+1', 64)
     #wfid = get_wave_front_id(fp, 'v2', tid) # 0-3
     (simd_id, wave_id) = get_hw_id(fp, 'vgprSerial+2', 'vgprSerial+3') 
 
     conf['tid'] = tid
-    conf['tid_of_wave'] = tid_of_wave
+    conf['fetch_tid_of_subgrp'] = tid_of_subgrp
     conf['simd_id'] = simd_id
     conf['wave_id'] = wave_id
 
@@ -280,7 +285,7 @@ def vgpr2sgpr(fp, dest, src, tab=1):
 
 
 def create_branch(fp, label, var, val, tab=1, eq=False):
-    tmp = 'hw_id+1'
+    tmp = 'sgprHWID+1'
     wid = vgpr2sgpr(fp, tmp, var)
     write_line(fp, 's_cmp_eq_u32\t%s, %d' % (reg_str(tmp), val), tab=tab)
     cmp_instr = 's_cbranch_scc1' if eq else 's_cbranch_scc0'
@@ -293,15 +298,100 @@ def wait_lgkmcnt(fp, cnt, tab=1):
     write_line(fp)
 
 
+def sopc_instr(fp, src0, src1, op, dtype, tab=1):
+    write_line(fp, 's_cmp_%s_%s\t%s, %s' % (op, dtype, src0, src1), tab=tab)
+
+
+def sop1_instr(fp, cmd, dtype, dest, src, tab=1):
+    write_line(fp, 's_%s_%s\t%s, %s' % (cmd, dtype, dest, src), tab=tab)
+
+
+def sop2_instr(fp, cmd, dtype, dest, src0, src1, tab=1):
+    write_line(fp, 's_%s_%s\t%s, %s, %s' % (cmd, dtype, dest, src0,
+        src1), tab=tab)
+
+
+def s_mov(fp, dest, src, dtype='b32', tab=1, nl=False):
+    dest, src = reg_str(dest), reg_str(src)
+    sop1_instr(fp, 'mov', dtype, dest, src, tab=tab)
+    if nl:
+        write_line(fp)
+
+
+def s_sub(fp, dest, src0, src1, dtype='b32', tab=1, nl=False):
+    src0, src1 = reg_str(src0), reg_str(src1)
+    sop2_instr(fp, 'sub', dtype, dest, src0, src1, tab=tab)
+    if nl:
+        write_line(fp)
+
+
+def s_lsh(fp, dest, src0, src1, ldir=True, dtype='b32', tab=1, nl=False):
+    src0, src1 = reg_str(src0), reg_str(src1)
+    sop2_instr(fp, 'lshl' if ldir else 'lshr', dtype, dest, src0, src1, tab=tab)
+    if nl:
+        write_line(fp)
+
+
+def s_add(fp, dest, src0, src1, carry_out=False, dtype='b32', tab=1, nl=False):
+    src0, src1 = reg_str(src0), reg_str(src1)
+    sop2_instr(fp, 'addc' if carry_out else 'add', dtype, dest, src0, src1, tab=tab)
+    if nl:
+        write_line(fp)
+
+
+def s_cmp(fp, src0, src1, op='eq', dtype='u32', tab=1, nl=False):
+    src0, src1 = reg_str(src0), reg_str(src1)
+    sopc_instr(fp, src0, src1, op, dtype, tab=tab)
+    if nl:
+        write_line(fp)
+
+
+def set_addr_desc(fp, mat, tab=1):
+    '''
+    WorkgroupId agnostic address calculation
+    s[workGroup0] provides MT0 tile number  that this workgroup working
+    s[workGroup1] provides MT1 tile number that this workgroup working
+     use tle number to generate start address of the tile that this workgroup allocated too
+
+    Global read addresses: address A resource descriptor set-up
+    sgpr[0-1] - base address
+    sgpr[2]   - limit
+    sgpr[3]   - attributes
+
+    calculate base address for  A
+    1. multiply MT0 size with TileNumber passed in s[sgprWorkGroup0]
+    2. multiply [1] result with stride[0] store result into 64-bit
+    3. the above two steps gives starting address of tile that this workgroup working
+    '''
+    src = 'sgprAddress' + mat
+    dest = 'sgprSrd' + mat
+    s_mov(fp, dest, src)
+    # (dest, 1) == dest+1
+    s_mov(fp, (dest, 1), (src, 1))
+    '''
+    s_mov(fp, 'sgprShadowLimitA', 'sgprTensor2dSizeA', 'u32')
+    s_mov(fp, 'sgprShadowLimitA+1', 'sgprTensor2dSizeA', 'u32')
+    # convert to bytes
+    s_lsh(fp, 'sgprShadowLimitA', 'sgprShadowLimitA', 1, ldir=True, dtype='b64')
+    # pad by 4
+    s_add(fp, 'sgprShadowLimitA', 'sgprShadowLimitA', 4, dtype='u32')
+    s_add(fp, 'sgprShadowLimitA+1', 'sgprShadowLimitA+1', 0, carry_out=True, dtype='u32')
+    s_cmp(fp, 'sgprShadowLimitA+1', 0)
+    s_cselect(fp, 'sgprSrdA+2', 'sgprShadowLimitA', 'BufferLimit')
+    '''
+    s_mov(fp, (dest, 2), 'BufferLimit')
+    s_mov(fp, (dest, 3), 'Srd127_96')
+
+
 def def_fetch(conf, fp):
     # load A/B address, stridesA/B, sgprTensor2dSizeA/B, size L
     addrA = load_karg(conf, fp, 'sgprAddressA', 4)
-    strideA = load_karg(conf, fp, 'sgprStridesA', 4)
-    t2d_sizeA = load_karg(conf, fp, 'sgprTensor2dSizeA', 4)
-    size_sum = load_karg(conf, fp, 'sgprSizesSum')
     addrB = addrA + '+2'
+    strideA = load_karg(conf, fp, 'sgprStridesA', 4)
     strideB = strideA + '+2'
+    t2d_sizeA = load_karg(conf, fp, 'sgprTensor2dSizeA', 4)
     t2d_sizeB = t2d_sizeA + '+2'
+    size_sum = load_karg(conf, fp, 'sgprSizesSum')
     write_line(fp)
 
     # set lds max size to 0x3000
@@ -314,7 +404,10 @@ def def_fetch(conf, fp):
 
     # wait for load kern args
     wait_lgkmcnt(fp, 0)
-    
+
+    # set address A descriptor
+    set_addr_desc(fp, 'A')
+
 
 def init_accvgpr(fp, i, tab=1):
     write_line(fp, 'v_accvgpr_write\t%s, 0, 0' % reg_str('vgprAcc', start_off=i), tab=tab)
@@ -337,6 +430,18 @@ def def_mac(conf, fp):
     write_line(fp)
     write_comments(fp, 'hide all memory  load (kern args load) latency with ACC VGPR initialization', tab=1)
     for_loop([32], [partial(init_accvgpr, fp, 'i')])
+
+    alpha = load_karg(conf, fp, 'sgprAlpha', 4)
+    beta = alpha + '+1'
+    strideD = load_karg(conf, fp, 'sgprStridesD', 4)
+    strideC = strideD + '+2'
+    addrD = load_karg(conf, fp, 'sgprAddressD', 4)
+    addrC = addrD + '+2'
+    write_line(fp)
+
+    write_comments(fp, 'Local Read Addresses', bar=True, nl=True, tab=1)
+
+    mac_tid_of_subgrp = get_tid_subgrp(fp, 'vgprSerial+1', 32)
 
 
 if __name__ == "__main__":
@@ -361,4 +466,6 @@ if __name__ == "__main__":
         def_fetch(conf, fp)
         def_mac(conf, fp)
         def_foot(conf, fp)
+
+    print("[Output]: %s" % out_fpath)
 

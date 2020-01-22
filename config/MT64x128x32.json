@@ -44,7 +44,8 @@
         "sgprLocalWriteAddrA": 76,
         "sgprLocalWriteAddrB": 78,
         "sgprHWID": 80,
-        "sgprFetchSubGrpId": 82
+        "sgprFetchSubGrpId": 82,
+        "sgprMACSubGrpId": 84
     },
 
     "kargs": {

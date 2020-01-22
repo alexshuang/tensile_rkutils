@@ -193,89 +193,71 @@ def reg_str(s, start_off=None, end_off=None):
     off = (start_off, end_off)
     if isinstance(s, tuple):
         s, *off = s
+    if not s.startswith('vgpr') and not s.startswith('sgpr'):
+        return s
     dtype = 'v' if s.startswith('vgpr') else 's'
     vname = s
-    if off[0]:
+    if off[0] and off[0] != 0:
         s = '%s+%s' % (s, off[0])
     if len(off) > 1 and off[1]:
         s = '%s:%s+%s' % (s, vname, off[1])
     return dtype + '[' + s + ']'
 
 
-def s_buff_load(fp, dest, base, off, dw=1):
+def s_load(fp, sgpr, src, off, dw=1):
     s = 's_load_dword%s %s, %s, 0x%x' % ('x' + str(dw) if dw > 1 else '',
-            reg_str(dest, end_off=(dw-1 if dw > 1 else None)),
-            reg_str(base, end_off=1), off)
+            reg_str(sgpr, end_off=(dw-1 if dw > 1 else None)),
+            reg_str(src, end_off=1), off)
     write_line(fp, s, tab=1)
-
-
-def buff_load(fp, dest, base, off, dw=4):
-    s = 'load_dword%s v[%s%s], v[%s:%s+3], 0x%x' % ('x' + str(dw) if dw > 1 else '',
-            dest, ':%s+%d' % (dest, dw - 1) if dw > 1 else '',
-            base, base, off)
-    write_line(fp, s, tab=1)
-
-
-def sv_buff_load(fp, reg, dest, src, off, dw=4, lds=0):
-    s = '%s_load_dword%s %s[%s%s], %s[%s:%s+3]' % (reg, 'x' + str(dw) if dw > 1 else '',
-            reg, dest, ':%s+%d' % (dest, dw - 1) if dw > 1 else '',
-            reg, src, src)
-    off_s = ', 0 offen:1 lds:%d offset:%d' % (lds, off) if reg == 'v' else ', 0x%x' % off
-    write_line(fp, s + off_s, tab=1)
 
 
 # load kernel args to sgpr
 def load_karg(conf, fp, var, dw=1):
-    s_buff_load(fp, var, 'sgprKernArgAddress', conf['kargs'][var], dw=dw)
+    s_load(fp, var, 'sgprKernArgAddress', conf['kargs'][var], dw=dw)
     return var
 
 
-def get_tid_x(fp, var, tab=1):
-    write_line(fp, 'v_mov_b32\t%s, v0' % reg_str(var), tab=tab)
-    return var
-
-
-def get_tid_subgrp(fp, var, grp_sz, tab=1):
-    write_line(fp, 'v_and_b32\t%s, %d, v0' % (reg_str(var), grp_sz), tab=tab)
-    return var
+def v_mask(fp, dest, src, subgrp_sz, dtype='b32', tab=1):
+    vop2_instr(fp, 'and', dtype, dest, src, subgrp_sz, tab=tab)
 
 
 def camp_lds(fp, sz, tab=1):
     write_line(fp, 's_mov_b32\tm0, 0x%x' % sz, tab=tab)
+    write_line(fp)
 
 
-def get_wave_front_id(fp, wid, tid, tab=1):
-    write_line(fp, 'v_lshrrev_b32\t%s, 6, %s' %
-            (reg_str(wid), reg_str(var)), tab=tab)
-    return wid
+def var_str(*s):
+    return '+'.join(str(o) for o in s)
 
 
-def get_hw_id(fp, simd_id, wave_id, cu_id=None, tab=1):
-    #HW_ID_REG
-    #bit[0-3] #waveId
-    #bit[5-4] #simdId
-    #bit[11-8] #CuId
-    write_line(fp, 's_getreg_b32\ts[sgprHWID], hwreg(HW_REG_HW_ID)', tab=tab)
-    write_line(fp, 'v_and_b32\tv4, 0x30, s[sgprHWID]', tab=tab)
-    write_line(fp, 'v_lshrrev_b32\t%s, 4, v4' % reg_str(simd_id), tab=tab)
-    write_line(fp, 'v_and_b32\t%s, 0xf, s[sgprHWID]' % reg_str(wave_id), tab=tab)
-    return (simd_id, wave_id)
+def read_hwreg(fp, dest, src):
+    sop1_sopk_instr(fp, 'getreg', 'b32', dest, 'hwreg(' + src + ')')
 
-
-def get_threadIds(conf, fp):
+    
+def get_thread_info(conf, fp):
     #vgprSerial    holds threadIdx
     #vgprSerial+1  holds WaveFrontId (0-63)
     #vgprSerial+2  holds threadIdy  (simd= 0,1,2,3)
     #vgprSerial+3  holds threadIdZ  (wave0 =0 wave1 = 1)
-    tid = get_tid_x(fp, 'vgprSerial')
-    tid_of_subgrp = get_tid_subgrp(fp, 'vgprSerial+1', 64)
-    #wfid = get_wave_front_id(fp, 'v2', tid) # 0-3
-    (simd_id, wave_id) = get_hw_id(fp, 'vgprSerial+2', 'vgprSerial+3') 
+    tid = 'vgprSerial'
+    v_mov(fp, tid, 'v0')
+    v_mask(fp, (tid, 1), tid, 64)
+    vgpr2sgpr(fp, 'sgprFetchSubGrpId', (tid, 1))
+
+    #HW_ID_REG
+    #bit[0-3] #waveId
+    #bit[5-4] #simdId
+    #bit[11-8] #CuId
+    hwid = 'sgprHWID'
+    read_hwreg(fp, hwid, 'HW_REG_HW_ID')
+    v_mask(fp, 'v4', '0x30', hwid)  # simd
+    v_lsh(fp, (tid, 2), 4, 'v4', ldir=False)
+    v_mask(fp, (tid, 3), '0xf', hwid) # waveid
 
     conf['tid'] = tid
-    conf['fetch_tid_of_subgrp'] = tid_of_subgrp
-    conf['simd_id'] = simd_id
-    conf['wave_id'] = wave_id
+    conf['subgrp_tid'] = var_str(tid, 1)
+    conf['simd_id'] = var_str(tid, 2)
+    conf['wave_id'] = var_str(tid, 3)
 
     write_line(fp)
 
@@ -299,41 +281,40 @@ def wait_lgkmcnt(fp, cnt, tab=1):
 
 
 def sopc_instr(fp, src0, src1, op, dtype, tab=1):
+    src0, src1 = reg_str(src0), reg_str(src1)
     write_line(fp, 's_cmp_%s_%s\t%s, %s' % (op, dtype, src0, src1), tab=tab)
 
 
-def sop1_instr(fp, cmd, dtype, dest, src, tab=1):
+def sop1_sopk_instr(fp, cmd, dtype, dest, src, tab=1):
+    dest, src = reg_str(dest), reg_str(src)
     write_line(fp, 's_%s_%s\t%s, %s' % (cmd, dtype, dest, src), tab=tab)
 
 
 def sop2_instr(fp, cmd, dtype, dest, src0, src1, tab=1):
+    dest, src0, src1 = reg_str(dest), reg_str(src0), reg_str(src1)
     write_line(fp, 's_%s_%s\t%s, %s, %s' % (cmd, dtype, dest, src0,
         src1), tab=tab)
 
 
 def s_mov(fp, dest, src, dtype='b32', tab=1, nl=False):
-    dest, src = reg_str(dest), reg_str(src)
-    sop1_instr(fp, 'mov', dtype, dest, src, tab=tab)
+    sop1_sopk_instr(fp, 'mov', dtype, dest, src, tab=tab)
     if nl:
         write_line(fp)
 
 
 def s_sub(fp, dest, src0, src1, dtype='b32', tab=1, nl=False):
-    src0, src1 = reg_str(src0), reg_str(src1)
     sop2_instr(fp, 'sub', dtype, dest, src0, src1, tab=tab)
     if nl:
         write_line(fp)
 
 
 def s_lsh(fp, dest, src0, src1, ldir=True, dtype='b32', tab=1, nl=False):
-    src0, src1 = reg_str(src0), reg_str(src1)
     sop2_instr(fp, 'lshl' if ldir else 'lshr', dtype, dest, src0, src1, tab=tab)
     if nl:
         write_line(fp)
 
 
 def s_add(fp, dest, src0, src1, carry_out=False, dtype='b32', tab=1, nl=False):
-    src0, src1 = reg_str(src0), reg_str(src1)
     sop2_instr(fp, 'addc' if carry_out else 'add', dtype, dest, src0, src1, tab=tab)
     if nl:
         write_line(fp)
@@ -383,6 +364,27 @@ def set_addr_desc(fp, mat, tab=1):
     s_mov(fp, (dest, 3), 'Srd127_96')
 
 
+def vop1_instr(fp, cmd, dtype, dest, src, tab=1):
+    dest, src = reg_str(dest), reg_str(src)
+    write_line(fp, 'v_%s_%s\t%s, %s' % (cmd, dtype, dest, src), tab=tab)
+
+
+def vop2_instr(fp, cmd, dtype, dest, src0, src1, tab=1):
+    dest, src0, src1 = reg_str(dest), reg_str(src0), reg_str(src1)
+    write_line(fp, 'v_%s_%s\t%s, %s, %s' % (cmd, dtype, dest, src0,
+        src1), tab=tab)
+
+
+def v_lsh(fp, dest, src0, src1, ldir=True, dtype='b32', tab=1, nl=False):
+    vop2_instr(fp, 'lshlrev' if ldir else 'lshrrev', dtype, dest, src0, src1, tab=tab)
+    if nl:
+        write_line(fp)
+
+
+def v_mov(fp, dest, src, dtype='b32', tab=1):
+    vop1_instr(fp, 'mov', dtype, dest, src, tab=tab)
+
+
 def def_fetch(conf, fp):
     # load A/B address, stridesA/B, sgprTensor2dSizeA/B, size L
     addrA = load_karg(conf, fp, 'sgprAddressA', 4)
@@ -397,8 +399,7 @@ def def_fetch(conf, fp):
     # set lds max size to 0x3000
     camp_lds(fp, 0x3000)
 
-    # git threadIdx/y/z, waveid, simdid...
-    get_threadIds(conf, fp)
+    get_thread_info(conf, fp)
 
     create_branch(fp, 'wave0_MAC', 'vgprSerial+3', 1)
 
@@ -441,7 +442,7 @@ def def_mac(conf, fp):
 
     write_comments(fp, 'Local Read Addresses', bar=True, nl=True, tab=1)
 
-    mac_tid_of_subgrp = get_tid_subgrp(fp, 'vgprSerial+1', 32)
+    #mac_tid_of_subgrp = get_tid_subgrp(fp, 'vgprSerial+1', 32)
 
 
 if __name__ == "__main__":

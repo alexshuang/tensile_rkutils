@@ -129,15 +129,15 @@ def def_lds_vars(conf, fp):
     mt_w = conf['mt']['w']
     simd = conf['mfma']['simd']
     a_per_wr = 256 + pad
-    lvca = 32 / (conf['glvw'] * 2)
-    rows_per_wave = mt_h / simd
-    a_vw = rows_per_wave / (64 / lvca)
+    lvca = int(32 / (conf['glvw'] * 2))
+    rows_per_wave = int(mt_h / simd)
+    a_vw = int(rows_per_wave / (64 / lvca))
     a_per_wave = a_per_wr * a_vw
     a_per_wg = a_per_wave * simd
     b_per_wr = 256 + pad
-    lvcb = 32 / (conf['glvw'] * 2)
-    cols_per_wave = mt_w / simd
-    b_vw = cols_per_wave / (64 / lvcb)
+    lvcb = int(32 / (conf['glvw'] * 2))
+    cols_per_wave = int(mt_w / simd)
+    b_vw = int(cols_per_wave / (64 / lvcb))
     b_per_wave = b_per_wr * b_vw
     b_per_wg = b_per_wave * simd
 
@@ -157,8 +157,8 @@ def def_lds_vars(conf, fp):
 
     conf['lvca'] = lvca
     conf['lvcb'] = lvcb
-    conf['a_vw'] = a_vw
-    conf['b_vw'] = b_vw
+    conf['A_VW'] = a_vw
+    conf['B_VW'] = b_vw
     conf['varlds_Asize_per_wr'] = a_per_wr
     conf['varlds_Asize_per_wave'] = a_per_wave
     conf['varlds_Asize_per_wg'] = a_per_wg
@@ -201,6 +201,8 @@ def reg_str(s, start_off=None, end_off=None):
         s = '%s+%s' % (s, off[0])
     if len(off) > 1 and off[1]:
         s = '%s:%s+%s' % (s, vname, off[1])
+    #if len(off) > 2:  # other str
+    #    s += ''.join(o for o in off[2:])
     return dtype + '[' + s + ']'
 
 
@@ -240,9 +242,12 @@ def get_thread_info(conf, fp):
     #vgprSerial+2  holds threadIdy  (simd= 0,1,2,3)
     #vgprSerial+3  holds threadIdZ  (wave0 =0 wave1 = 1)
     tid = 'vgprSerial'
+    wf_tid = var_str(tid, 1)
+    simd_id = var_str(tid, 2)
+    wave_id = var_str(tid, 3)
+
     v_mov(fp, tid, 'v0')
-    v_mask(fp, (tid, 1), tid, 64)
-    vgpr2sgpr(fp, 'sgprFetchSubGrpId', (tid, 1))
+    v_mask(fp, wf_tid, tid, 64) # wave front id
 
     #HW_ID_REG
     #bit[0-3] #waveId
@@ -251,13 +256,13 @@ def get_thread_info(conf, fp):
     hwid = 'sgprHWID'
     read_hwreg(fp, hwid, 'HW_REG_HW_ID')
     v_mask(fp, 'v4', '0x30', hwid)  # simd
-    v_lsh(fp, (tid, 2), 4, 'v4', ldir=False)
-    v_mask(fp, (tid, 3), '0xf', hwid) # waveid
+    v_lshr(fp, simd_id, 4, 'v4')
+    v_mask(fp, wave_id, '0xf', hwid) # waveid
 
-    conf['tid'] = tid
-    conf['subgrp_tid'] = var_str(tid, 1)
-    conf['simd_id'] = var_str(tid, 2)
-    conf['wave_id'] = var_str(tid, 3)
+    conf['vTID'] = tid
+    conf['vWFTID'] = wf_tid
+    conf['vSIMDID'] = simd_id
+    conf['vWaveID'] = wave_id
 
     write_line(fp)
 
@@ -308,13 +313,27 @@ def s_sub(fp, dest, src0, src1, dtype='b32', tab=1, nl=False):
         write_line(fp)
 
 
+def s_mul(fp, dest, src0, src1, dtype='i32', tab=1, nl=False):
+    sop2_instr(fp, 'mul', dtype, dest, src0, src1, tab=tab)
+    if nl:
+        write_line(fp)
+
+
 def s_lsh(fp, dest, src0, src1, ldir=True, dtype='b32', tab=1, nl=False):
     sop2_instr(fp, 'lshl' if ldir else 'lshr', dtype, dest, src0, src1, tab=tab)
     if nl:
         write_line(fp)
 
 
-def s_add(fp, dest, src0, src1, carry_out=False, dtype='b32', tab=1, nl=False):
+def s_lshl(fp, dest, src0, src1, dtype='b32', tab=1, nl=False):
+    s_lsh(fp, dest, src0, src1, dtype=dtype, ldir=True, tab=tab, nl=nl)
+
+
+def s_lshr(fp, dest, src0, src1, dtype='b32', tab=1, nl=False):
+    s_lsh(fp, dest, src0, src1, dtype=dtype, ldir=False, tab=tab, nl=nl)
+
+
+def s_add(fp, dest, src0, src1, carry_out=False, dtype='i32', tab=1, nl=False):
     sop2_instr(fp, 'addc' if carry_out else 'add', dtype, dest, src0, src1, tab=tab)
     if nl:
         write_line(fp)
@@ -362,6 +381,7 @@ def set_addr_desc(fp, mat, tab=1):
     '''
     s_mov(fp, (dest, 2), 'BufferLimit')
     s_mov(fp, (dest, 3), 'Srd127_96')
+    write_line(fp)
 
 
 def vop1_instr(fp, cmd, dtype, dest, src, tab=1):
@@ -375,14 +395,97 @@ def vop2_instr(fp, cmd, dtype, dest, src0, src1, tab=1):
         src1), tab=tab)
 
 
-def v_lsh(fp, dest, src0, src1, ldir=True, dtype='b32', tab=1, nl=False):
+def v_lsh(fp, dest, src0, src1, dtype, ldir, tab=1, nl=False):
     vop2_instr(fp, 'lshlrev' if ldir else 'lshrrev', dtype, dest, src0, src1, tab=tab)
     if nl:
         write_line(fp)
 
 
+def v_lshl(fp, dest, src0, src1, dtype='b32', tab=1, nl=False):
+    v_lsh(fp, dest, src0, src1, dtype=dtype, ldir=True, tab=tab, nl=nl)
+
+
+def v_lshr(fp, dest, src0, src1, dtype='b32', tab=1, nl=False):
+    v_lsh(fp, dest, src0, src1, dtype=dtype, ldir=False, tab=tab, nl=nl)
+
+
 def v_mov(fp, dest, src, dtype='b32', tab=1):
     vop1_instr(fp, 'mov', dtype, dest, src, tab=tab)
+
+
+def v_add(fp, dest, src0, src1, carry_out=False, dtype='i32', tab=1, nl=False):
+    if carry_out == False:
+        vop2_instr(fp, 'add', dtype, dest, src0, src1, tab=tab)
+    else:
+        dest, src0, src1 = reg_str(dest), reg_str(src0), reg_str(src1)
+        write_line(fp, 'v_add_co_%s\t%s, vcc, %s, %s' % (dtype, dest, src0,
+            src1), tab=tab)
+    if nl:
+        write_line(fp)
+
+
+def v_mul(fp, dest, src0, src1, dtype='i32', tab=1, nl=False):
+    vop2_instr(fp, 'mul_lo', dtype, dest, src0, src1, tab=tab)
+    if nl:
+        write_line(fp)
+
+
+def to_shift_bit(val):
+    b, s = 0, 1
+    while s < val:
+        s *= 2
+        b += 1
+    return b
+
+
+def cvt2bytes(fp, var):
+    # address elements to bytes
+    v_lshl(fp, var, 1, var)
+
+
+def global_address_assignment(conf, fp, mat):
+    write_comments(fp, 'global address %s' % mat, bar=True, nl=True, tab=1)
+
+    # set address A descriptor
+    set_addr_desc(fp, mat)
+
+    src = 'vgprGlobalReadOfvar' + mat
+    off = 'sgprScalarGlobalReadOffset' + mat
+    mat_stride = 'sgprStrides' + mat
+
+    # start read address of wave
+    mt = conf['mt']['h']
+    s_mul(fp, 's84', mat_stride, mt)
+    s_mul(fp, 's84', 'sgprWorkGroup0', 's84')
+    vgpr2sgpr(fp, 'sgprFetchSubGrpId', conf['vSIMDID'])
+    s_mul(fp, 's85', 'sgprFetchSubGrpId', mt >> 2)    # handle 16 rows per subgrp(wave)
+    s_mul(fp, 's85', mat_stride, 's85')
+    s_add(fp, 's84', 's84', 's85')
+
+    write_line(fp)
+
+    # tile offset assignment
+    tid = conf['vWFTID']
+    glvw = conf['glvw']
+    lvca = conf['lvca']
+    write_comments(fp, 'LVCA=%d, vw=-1' % lvca, tab=1)
+    v_lshr(fp, 'v0', to_shift_bit(lvca), tid)
+    v_mul(fp, 'v4', mat_stride, 'v0', dtype='u32')
+    v_mask(fp, 'v1', lvca - 1, tid)
+    cvt2bytes(fp, 'v1')
+    v_add(fp, src, 'v4', 'v1', dtype='u32', carry_out=True)
+    v_add(fp, src, src, 's84', dtype='u32')
+    cvt2bytes(fp, src)
+
+    write_line(fp)
+
+    s_lshl(fp, off, mat_stride, 3) # 4 lines * 2 bytes per element
+    s_sub(fp, off, off, 'varlds_%ssize_per_wr' % mat, dtype='u32')
+    for i in range(1, conf['A_VW']):
+        v_add(fp, (src, i), off, (src, i - 1))
+
+    write_line(fp)
+
 
 
 def def_fetch(conf, fp):
@@ -406,9 +509,7 @@ def def_fetch(conf, fp):
     # wait for load kern args
     wait_lgkmcnt(fp, 0)
 
-    # set address A descriptor
-    set_addr_desc(fp, 'A')
-
+    global_address_assignment(conf, fp, 'A')
 
 def init_accvgpr(fp, i, tab=1):
     write_line(fp, 'v_accvgpr_write\t%s, 0, 0' % reg_str('vgprAcc', start_off=i), tab=tab)

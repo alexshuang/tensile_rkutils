@@ -444,22 +444,24 @@ def cvt2bytes(fp, var):
 
 
 def global_address_assignment(conf, fp, mat):
-    write_comments(fp, 'global address %s' % mat, bar=True, nl=True, tab=1)
+    write_comments(fp, 'global address of %s' % mat, bar=True, nl=True, tab=1)
 
     # set address A descriptor
     set_addr_desc(fp, mat)
 
+    dest = 'sgprLocalWriteAddr' + mat
     src = 'vgprGlobalReadOfvar' + mat
     off = 'sgprScalarGlobalReadOffset' + mat
     mat_stride = 'sgprStrides' + mat
+    vw = conf[mat + '_VW']
 
     # start read address of wave
-    mt = conf['mt']['h']
+    mt = conf['mt']['h'] if mat == 'A' else conf['mt']['w']
     s_mul(fp, 's84', mat_stride, mt)
     s_mul(fp, 's84', 'sgprWorkGroup0', 's84')
     vgpr2sgpr(fp, 'sgprFetchSubGrpId', conf['vSIMDID'])
-    s_mul(fp, 's85', 'sgprFetchSubGrpId', mt >> 2)    # handle 16 rows per subgrp(wave)
-    s_mul(fp, 's85', mat_stride, 's85')
+    s_mul(fp, 's85', mat_stride, int(mt / conf['mfma']['simd']))
+    s_mul(fp, 's85', 'sgprFetchSubGrpId', 's85') # handle 16 rows per subgrp(wave)
     s_add(fp, 's84', 's84', 's85')
 
     write_line(fp)
@@ -481,11 +483,14 @@ def global_address_assignment(conf, fp, mat):
 
     s_lshl(fp, off, mat_stride, 3) # 4 lines * 2 bytes per element
     s_sub(fp, off, off, 'varlds_%ssize_per_wr' % mat, dtype='u32')
-    for i in range(1, conf['A_VW']):
-        v_add(fp, (src, i), off, (src, i - 1))
-
+    for i in range(1, vw):
+        v_add(fp, (src, i), off, (src, i - 1), dtype='u32')
     write_line(fp)
-
+    
+    write_comments(fp, 'global memory to lds address', tab=1)
+    s_mov(fp, dest, 'varlds_%ssize_per_wave' % mat)
+    s_mul(fp, dest, 'sgprFetchSubGrpId', dest)
+    write_line(fp)
 
 
 def def_fetch(conf, fp):
@@ -509,7 +514,10 @@ def def_fetch(conf, fp):
     # wait for load kern args
     wait_lgkmcnt(fp, 0)
 
+    # global address of A/B
     global_address_assignment(conf, fp, 'A')
+    global_address_assignment(conf, fp, 'B')
+
 
 def init_accvgpr(fp, i, tab=1):
     write_line(fp, 'v_accvgpr_write\t%s, 0, 0' % reg_str('vgprAcc', start_off=i), tab=tab)

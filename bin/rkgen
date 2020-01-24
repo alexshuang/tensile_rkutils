@@ -223,8 +223,8 @@ def v_mask(fp, dest, src, subgrp_sz, dtype='b32', tab=1):
     vop2_instr(fp, 'and', dtype, dest, src, subgrp_sz, tab=tab)
 
 
-def camp_lds(fp, sz, tab=1):
-    write_line(fp, 's_mov_b32\tm0, 0x%x' % sz, tab=tab)
+def set_lds_addr(fp, addr, tab=1):
+    s_mov(fp, 'm0', addr)
     write_line(fp)
 
 
@@ -483,13 +483,62 @@ def global_address_assignment(conf, fp, mat):
 
     s_lshl(fp, off, mat_stride, 3) # 4 lines * 2 bytes per element
     s_sub(fp, off, off, 'varlds_%ssize_per_wr' % mat, dtype='u32')
-    for i in range(1, vw):
+    for i in range(1, vw + 1):
         v_add(fp, (src, i), off, (src, i - 1), dtype='u32')
     write_line(fp)
     
     write_comments(fp, 'global memory to lds address', tab=1)
     s_mov(fp, dest, 'varlds_%ssize_per_wave' % mat)
     s_mul(fp, dest, 'sgprFetchSubGrpId', dest)
+    s_add(fp, dest, dest, 'var%s_lds_base_addr' % mat, dtype='i32')
+    write_line(fp)
+
+
+def barrier(fp, val=0):
+    write_line(fp, 's_barrier', tab=1)
+    write_line(fp)
+
+
+def lo2hi(fp, var):
+    # copy var to var+1
+    dest = var_str(var, 1)
+    s_mov(fp, dest, var)
+    return dest
+
+
+def buffer_load(fp, dest, off, src_desc, dw=1, lds=0, offset=None, tab=1, nl=False):
+    dest, off, src_desc = reg_str(dest), reg_str(off), reg_str(src_desc)
+    s = 'buffer_load_dword%s %s, %s, %s, %s' % ('x' + str(dw) if dw > 1 else '',
+            dest, off, src_desc, '0 offen:1 lds:%d offset:%s' % (lds, offset))
+    write_line(fp, s, tab=tab)
+    if nl:
+        write_line(fp)
+
+
+def fetch2lds(conf, fp, mat, k=32, it=2):
+    write_comments(fp, 'fetch %s to lds, %d iterations' % (mat, it), bar=True, tab=1)
+    barrier(fp)
+
+    base = 'sgprLocalWriteAddr' + mat
+    addr = lo2hi(fp, base)
+    dest = 'vgprG2L' + mat
+    off = 'vgprGlobalReadOfvar' + mat
+    src_desc = 'sgprSrd' + mat
+    vw = conf[mat + '_VW']
+    wr_sz = 'varlds_%ssize_per_wr' % mat
+    it_sz = 'varlds_%ssize_per_wg' % mat
+
+    for i in range(it):
+        set_lds_addr(fp, addr)
+        for i in range(vw):
+            offset = '%s * %d' % (wr_sz, i)
+            buffer_load(fp, (dest, i), (off, i), (src_desc, 0, 3), lds=1, offset=offset)
+        # update off to next iteration 
+        for i in range(vw):
+            v_add(fp, (off, i), 64, (off, i))
+        #update lds addr
+        s_add(fp, addr, addr, it_sz)
+        write_line(fp)
     write_line(fp)
 
 
@@ -504,12 +553,12 @@ def def_fetch(conf, fp):
     size_sum = load_karg(conf, fp, 'sgprSizesSum')
     write_line(fp)
 
-    # set lds max size to 0x3000
-    camp_lds(fp, 0x3000)
+    # clamp lds size to 0x3000
+    set_lds_addr(fp, 0x3000)
 
     get_thread_info(conf, fp)
 
-    create_branch(fp, 'wave0_MAC', 'vgprSerial+3', 1)
+    create_branch(fp, 'wave0_MAC', conf['vWaveID'], 1)
 
     # wait for load kern args
     wait_lgkmcnt(fp, 0)
@@ -517,6 +566,10 @@ def def_fetch(conf, fp):
     # global address of A/B
     global_address_assignment(conf, fp, 'A')
     global_address_assignment(conf, fp, 'B')
+
+    # prefetch 2 A/B iterations to lds
+    fetch2lds(conf, fp, 'A')
+    fetch2lds(conf, fp, 'B')
 
 
 def init_accvgpr(fp, i, tab=1):

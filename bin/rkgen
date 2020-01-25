@@ -187,28 +187,28 @@ def def_foot(conf, fp):
     write_line(fp)
 
 
-def reg_str(s, start_off=None, end_off=None):
+def reg_str(s, start_off=0, end_off=0):
+    if isinstance(s, str) and (s.startswith('v[') or s.startswith('s[')):
+        return s
     if isinstance(s, int) or (isinstance(s, str) and s[0].isdigit()):
         return s
-    off = (start_off, end_off)
     if isinstance(s, tuple):
         s, *off = s
+        start_off = off[0]
+        if len(off) > 1: end_off = off[1]
     if not s.startswith('vgpr') and not s.startswith('sgpr'):
         return s
     dtype = 'v' if s.startswith('vgpr') else 's'
-    vname = s
-    if off[0] and off[0] != 0:
-        s = '%s+%s' % (s, off[0])
-    if len(off) > 1 and off[1]:
-        s = '%s:%s+%s' % (s, vname, off[1])
-    #if len(off) > 2:  # other str
-    #    s += ''.join(o for o in off[2:])
+    if end_off != 0: 
+        s = '%s+%s:%s+%s' % (s, start_off, s, end_off)
+    elif start_off != 0:
+        s = '%s+%s' % (s, start_off)
     return dtype + '[' + s + ']'
 
 
 def s_load(fp, sgpr, src, off, dw=1):
     s = 's_load_dword%s %s, %s, 0x%x' % ('x' + str(dw) if dw > 1 else '',
-            reg_str(sgpr, end_off=(dw-1 if dw > 1 else None)),
+            reg_str(sgpr, end_off=(dw - 1)),
             reg_str(src, end_off=1), off)
     write_line(fp, s, tab=1)
 
@@ -280,8 +280,9 @@ def create_branch(fp, label, var, val, tab=1, eq=False):
     write_line(fp)
 
 
-def wait_lgkmcnt(fp, cnt, tab=1):
-    write_line(fp, 's_waitcnt\tlgkmcnt(%d)' % cnt, tab=tab)
+def s_waitcnt(fp, cnt, itype=None, tab=1):
+    s = '%scnt(%d)' % (itype, cnt) if itype else str(cnt)
+    write_line(fp, 's_waitcnt\t%s' % s, tab=tab)
     write_line(fp)
 
 
@@ -483,8 +484,12 @@ def global_address_assignment(conf, fp, mat):
 
     s_lshl(fp, off, mat_stride, 3) # 4 lines * 2 bytes per element
     s_sub(fp, off, off, 'varlds_%ssize_per_wr' % mat, dtype='u32')
+    '''
     for i in range(1, vw + 1):
         v_add(fp, (src, i), off, (src, i - 1), dtype='u32')
+    '''
+    for_loop(vw, partial(v_add, fp, var_str(src, 'i'), off,
+        var_str(src, 'i-1'), dtype='u32'), start=1)
     write_line(fp)
     
     write_comments(fp, 'global memory to lds address', tab=1)
@@ -494,7 +499,7 @@ def global_address_assignment(conf, fp, mat):
     write_line(fp)
 
 
-def barrier(fp, val=0):
+def s_barrier(fp, val=0):
     write_line(fp, 's_barrier', tab=1)
     write_line(fp)
 
@@ -507,7 +512,7 @@ def lo2hi(fp, var):
 
 
 def buffer_load(fp, dest, off, src_desc, dw=1, lds=0, offset=None, tab=1, nl=False):
-    dest, off, src_desc = reg_str(dest), reg_str(off), reg_str(src_desc)
+    dest, off, src_desc = reg_str(dest), reg_str(off), reg_str(src_desc, end_off=3)
     s = 'buffer_load_dword%s %s, %s, %s, %s' % ('x' + str(dw) if dw > 1 else '',
             dest, off, src_desc, '0 offen:1 lds:%d offset:%s' % (lds, offset))
     write_line(fp, s, tab=tab)
@@ -517,7 +522,7 @@ def buffer_load(fp, dest, off, src_desc, dw=1, lds=0, offset=None, tab=1, nl=Fal
 
 def fetch2lds(conf, fp, mat, k=32, it=2):
     write_comments(fp, 'fetch %s to lds, %d iterations' % (mat, it), bar=True, tab=1)
-    barrier(fp)
+    s_barrier(fp)
 
     base = 'sgprLocalWriteAddr' + mat
     addr = lo2hi(fp, base)
@@ -528,6 +533,7 @@ def fetch2lds(conf, fp, mat, k=32, it=2):
     wr_sz = 'varlds_%ssize_per_wr' % mat
     it_sz = 'varlds_%ssize_per_wg' % mat
 
+    '''
     for i in range(it):
         set_lds_addr(fp, addr)
         for i in range(vw):
@@ -536,6 +542,19 @@ def fetch2lds(conf, fp, mat, k=32, it=2):
         # update off to next iteration 
         for i in range(vw):
             v_add(fp, (off, i), 64, (off, i))
+        #update lds addr
+        s_add(fp, addr, addr, it_sz)
+        write_line(fp)
+    '''
+    for i in range(it):
+        set_lds_addr(fp, addr)
+        
+        func = partial(buffer_load, fp, var_str(dest, 'i'), var_str(off, 'i'),
+                src_desc, lds=1, offset='%s * i' % wr_sz)
+        for_loop(vw, func)
+        # update off to next iteration 
+        func = partial(v_add, fp, var_str(off, 'i'), 64, var_str(off, 'i'))
+        for_loop(vw, func)
         #update lds addr
         s_add(fp, addr, addr, it_sz)
         write_line(fp)
@@ -561,7 +580,7 @@ def def_fetch(conf, fp):
     create_branch(fp, 'wave0_MAC', conf['vWaveID'], 1)
 
     # wait for load kern args
-    wait_lgkmcnt(fp, 0)
+    s_waitcnt(fp, 0, 'lgkm')
 
     # global address of A/B
     global_address_assignment(conf, fp, 'A')
@@ -571,19 +590,34 @@ def def_fetch(conf, fp):
     fetch2lds(conf, fp, 'A')
     fetch2lds(conf, fp, 'B')
 
+    s_waitcnt(fp, 20, 'vm')
+    s_barrier(fp)
+    s_waitcnt(fp, 12, 'vm')
+    s_barrier(fp)
+    
 
 def init_accvgpr(fp, i, tab=1):
     write_line(fp, 'v_accvgpr_write\t%s, 0, 0' % reg_str('vgprAcc', start_off=i), tab=tab)
 
 
-def for_loop(ends, func_list, start=0, idxs='i,j,k,l,m,n'):
+def listify(d):
+    if isinstance(d, list): return d
+    if isinstance(d, tuple): return list(d)
+    return [d]
+
+
+def for_loop(loops, funcs, start=0, idxs='i,j,k,l,m,n'):
+    loops, funcs = listify(loops), listify(funcs)
     idxs = idxs.split(',')
-    tab = 0
-    for i, k in enumerate(ends):
+    tab = 1
+    for i, k in enumerate(loops):
         idx = idxs[i]
+        write_line(fp, 'for var %s = %d; %s < %d; %s++' % (idx, start, idx, k, idx), tab=tab)
         tab += 1
-        write_line(fp, 'for var %s = 0; %s < %d; %s++' % (idx, idx, k, idx), tab=tab)
-        for o in func_list: o(tab=tab+1)
+    for o in funcs: o(tab=tab+1)
+    for i in range(len(loops)):
+        tab -= 1
+        if tab <= 0: break
         write_line(fp, 'end', tab=tab)
     write_line(fp)
 
@@ -592,7 +626,7 @@ def def_mac(conf, fp):
     write_line(fp, 'wave0_MAC:')
     write_line(fp)
     write_comments(fp, 'hide all memory  load (kern args load) latency with ACC VGPR initialization', tab=1)
-    for_loop([32], [partial(init_accvgpr, fp, 'i')])
+    for_loop(32, partial(init_accvgpr, fp, 'i'))
 
     alpha = load_karg(conf, fp, 'sgprAlpha', 4)
     beta = alpha + '+1'

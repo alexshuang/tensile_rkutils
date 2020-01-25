@@ -280,10 +280,11 @@ def create_branch(fp, label, var, val, tab=1, eq=False):
     write_line(fp)
 
 
-def s_waitcnt(fp, cnt, itype=None, tab=1):
+def s_waitcnt(fp, cnt, itype=None, tab=1, nl=False):
     s = '%scnt(%d)' % (itype, cnt) if itype else str(cnt)
     write_line(fp, 's_waitcnt\t%s' % s, tab=tab)
-    write_line(fp)
+    if nl:
+        write_line(fp)
 
 
 def sopc_instr(fp, src0, src1, op, dtype, tab=1):
@@ -308,7 +309,7 @@ def s_mov(fp, dest, src, dtype='b32', tab=1, nl=False):
         write_line(fp)
 
 
-def s_sub(fp, dest, src0, src1, dtype='b32', tab=1, nl=False):
+def s_sub(fp, dest, src0, src1, dtype='i32', tab=1, nl=False):
     sop2_instr(fp, 'sub', dtype, dest, src0, src1, tab=tab)
     if nl:
         write_line(fp)
@@ -499,9 +500,16 @@ def global_address_assignment(conf, fp, mat):
     write_line(fp)
 
 
-def s_barrier(fp, val=0):
+def s_barrier(fp, val=0, nl=False):
     write_line(fp, 's_barrier', tab=1)
-    write_line(fp)
+    if nl:
+        write_line(fp)
+
+
+def s_setprio(fp, prio, nl=False):
+    write_line(fp, 's_setprio %d' % prio, tab=1)
+    if nl:
+        write_line(fp)
 
 
 def lo2hi(fp, var):
@@ -520,18 +528,14 @@ def buffer_load(fp, dest, off, src_desc, dw=1, lds=0, offset=None, tab=1, nl=Fal
         write_line(fp)
 
 
-def fetch2lds(conf, fp, mat, k=32, it=2):
+def fetch2lds(conf, fp, mat, base, k=32, it=1):
     write_comments(fp, 'fetch %s to lds, %d iterations' % (mat, it), bar=True, tab=1)
-    s_barrier(fp)
 
-    base = 'sgprLocalWriteAddr' + mat
-    addr = lo2hi(fp, base)
     dest = 'vgprG2L' + mat
     off = 'vgprGlobalReadOfvar' + mat
     src_desc = 'sgprSrd' + mat
     vw = conf[mat + '_VW']
     wr_sz = 'varlds_%ssize_per_wr' % mat
-    it_sz = 'varlds_%ssize_per_wg' % mat
 
     '''
     for i in range(it):
@@ -547,7 +551,7 @@ def fetch2lds(conf, fp, mat, k=32, it=2):
         write_line(fp)
     '''
     for i in range(it):
-        set_lds_addr(fp, addr)
+        set_lds_addr(fp, base)
         
         func = partial(buffer_load, fp, var_str(dest, 'i'), var_str(off, 'i'),
                 src_desc, lds=1, offset='%s * i' % wr_sz)
@@ -555,9 +559,84 @@ def fetch2lds(conf, fp, mat, k=32, it=2):
         # update off to next iteration 
         func = partial(v_add, fp, var_str(off, 'i'), 64, var_str(off, 'i'))
         for_loop(vw, func)
-        #update lds addr
-        s_add(fp, addr, addr, it_sz)
+    write_line(fp)
+
+
+def wait4fetch(fp, wf_prio=0, tab=1):
+    vwA = conf['A_VW']
+    vwB = conf['B_VW']
+
+    # wait for A[0]
+    s_waitcnt(fp, 2 * vwB + vwA, 'vm')
+    if wf_prio > 0:
+        s_setprio(fp, wf_prio)
+    s_barrier(fp) 
+    s_setprio(fp, 0)
+
+    # wait for B[0]
+    s_waitcnt(fp, vwB + vwA, 'vm')
+    if wf_prio > 0:
+        s_setprio(fp, wf_prio)
+    s_barrier(fp)
+    s_setprio(fp, 0)
+    write_line(fp)
+
+
+def s_cbranch(fp, label, eq=True, tab=1, nl=True):
+    write_line(fp, 's_cbranch_scc%d\t%s' % (eq, label), tab=1)
+    if nl:
         write_line(fp)
+
+
+def do_fetch(conf, fp):
+    baseA1 = 'sgprLocalWriteAddrA'
+    baseA2 = 'sgprLocalWriteAddrA+1'
+    baseB1 = 'sgprLocalWriteAddrB'
+    baseB2 = 'sgprLocalWriteAddrB+1'
+    s_add(fp, baseA2, baseA1, 'varlds_Asize_per_wg', dtype='u32')
+    s_add(fp, baseB2, baseB1, 'varlds_Bsize_per_wg', dtype='u32')
+    prefetch = conf['prefetch']
+    vwA = conf['A_VW']
+    vwB = conf['B_VW']
+
+    if prefetch:
+        fetch2lds(conf, fp, 'A', baseA1)
+        fetch2lds(conf, fp, 'B', baseB1)
+        fetch2lds(conf, fp, 'A', baseA2)
+        fetch2lds(conf, fp, 'B', baseB2)
+        wait4fetch(fp)
+
+    lcnt = 'sgprLoopCounters'
+    s_lshr(fp, lcnt, 'sgprSizesSum', 5) # k=32
+    s_sub(fp, lcnt, 0, lcnt)
+    if prefetch:
+        s_add(fp, lcnt, 2, lcnt, dtype='i32')
+    write_line(fp)
+
+    write_line(fp, 'unroll_fetch:')
+
+    fetch2lds(conf, fp, 'A', baseA1)
+    fetch2lds(conf, fp, 'B', baseB1)
+    wait4fetch(fp, 1)
+    s_add(fp, lcnt, 1, lcnt, dtype='u32')
+    write_line(fp)
+
+    fetch2lds(conf, fp, 'A', baseA2)
+    fetch2lds(conf, fp, 'B', baseB2)
+    wait4fetch(fp, 1)
+    s_add(fp, lcnt, 1, lcnt, dtype='u32')
+    write_line(fp)
+
+    s_cmp(fp, 'sgprLoopCounters', 0, dtype='i32')
+    s_cbranch(fp, 'unroll_fetch', eq=False)
+    write_line(fp)
+
+    write_line(fp, 'finish_fetch:')
+    s_waitcnt(fp, 8, itype='vm')
+    s_barrier(fp)
+    s_waitcnt(fp, 0, itype='vm')
+    s_barrier(fp)
+    write_line(fp, 's_endpgm')
     write_line(fp)
 
 
@@ -586,15 +665,23 @@ def def_fetch(conf, fp):
     global_address_assignment(conf, fp, 'A')
     global_address_assignment(conf, fp, 'B')
 
+    do_fetch(conf, fp)
+'''
     # prefetch 2 A/B iterations to lds
-    fetch2lds(conf, fp, 'A')
+    s_barrier(fp)
+    a_cnt = fetch2lds(conf, fp, 'A')    # A[0]
+    b_cnt = fetch2lds(conf, fp, 'B')
+    fetch2lds(conf, fp, 'A')    # A[1]
     fetch2lds(conf, fp, 'B')
 
-    s_waitcnt(fp, 20, 'vm')
+    # wait for A[0]
+    s_waitcnt(fp, 2 * b_cnt + a_cnt, 'vm')
+    s_barrier(fp) 
+    # wait for B[0]
+    s_waitcnt(fp, b_cnt + a_cnt, 'vm')
     s_barrier(fp)
-    s_waitcnt(fp, 12, 'vm')
-    s_barrier(fp)
-    
+'''
+
 
 def init_accvgpr(fp, i, tab=1):
     write_line(fp, 'v_accvgpr_write\t%s, 0, 0' % reg_str('vgprAcc', start_off=i), tab=tab)

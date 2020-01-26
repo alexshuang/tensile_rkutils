@@ -446,7 +446,7 @@ def cvt2bytes(fp, var):
 
 
 def global_address_assignment(conf, fp, mat):
-    write_comments(fp, 'global address of %s' % mat, bar=True, nl=True, tab=1)
+    write_comments(fp, 'global address of %s' % mat, tab=1)
 
     # set address A descriptor
     set_addr_desc(fp, mat)
@@ -660,6 +660,7 @@ def def_fetch(conf, fp):
 
     # wait for load kern args
     s_waitcnt(fp, 0, 'lgkm')
+    write_line(fp)
 
     # global address of A/B
     global_address_assignment(conf, fp, 'A')
@@ -709,12 +710,55 @@ def for_loop(loops, funcs, start=0, idxs='i,j,k,l,m,n'):
     write_line(fp)
 
 
+def local_address_assignment(conf, fp, mat):
+    write_comments(fp, 'local address of %s' % mat, tab=1)
+
+    src = 'vgprLocalReadAddr' + mat
+    src2 = 'vgprLocalReadAddr%s+1' % mat
+    base = 'var%s_lds_base_addr' % mat
+    step = 'varlds_%ssize_per_wg' % mat
+    wave_sz = 'varlds_%ssize_per_wave' % mat
+    k = conf['mfma']['k']
+
+    # map thread to lds, map to 32 lanes
+    v_mask(fp, 'v1', conf['vWFTID'], '0x1f') # mask 32
+    v_mul(fp, src, 32, 'v1', dtype='u32')
+    write_line(fp)
+
+    # calc pad length
+    v_lshr(fp, 'v2', 2, 'v1') # a pad follow by 4 wr
+    v_mul(fp, 'v2', 'varlds_pad', 'v2', dtype='u32')
+    write_line(fp)
+
+    # 2 threads map to 1 lane, read k elements per lane
+    v_lshr(fp, 'v1', 5, conf['vWFTID'])
+    v_lshl(fp, 'v1', to_shift_bit(k / 2), 'v1')
+    v_add(fp, src, 'v1', src, dtype='u32')
+    cvt2bytes(fp, src)
+    write_line(fp)
+
+    # add pad
+    v_add(fp, src, src, 'v2', dtype='u32')
+    write_line(fp)
+
+    # address subgrp of B, 1 wave of A can boardcast to all 4 waves of B
+    if mat == 'B':
+        s_mul(fp, 's84', 'sgprFetchSubGrpId', wave_sz)
+        v_add(fp, src, 's84', src, dtype='u32')
+
+    # add to base addr
+    v_add(fp, src, base, src, dtype='u32')
+    v_add(fp, src2, step, src, dtype='u32')
+    write_line(fp)
+
+
 def def_mac(conf, fp):
     write_line(fp, 'wave0_MAC:')
     write_line(fp)
     write_comments(fp, 'hide all memory  load (kern args load) latency with ACC VGPR initialization', tab=1)
     for_loop(32, partial(init_accvgpr, fp, 'i'))
 
+    t2d_sizeC = load_karg(conf, fp, 'sgprTensor2dSizeC', 2)
     alpha = load_karg(conf, fp, 'sgprAlpha', 4)
     beta = alpha + '+1'
     strideD = load_karg(conf, fp, 'sgprStridesD', 4)
@@ -725,7 +769,12 @@ def def_mac(conf, fp):
 
     write_comments(fp, 'Local Read Addresses', bar=True, nl=True, tab=1)
 
-    #mac_tid_of_subgrp = get_tid_subgrp(fp, 'vgprSerial+1', 32)
+    local_address_assignment(conf, fp, 'A')
+    local_address_assignment(conf, fp, 'B')
+
+    s_waitcnt(fp, 0, itype='lgkm')
+
+
 
 
 if __name__ == "__main__":

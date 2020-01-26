@@ -193,11 +193,12 @@ def global_address_assignment(conf, wrt, mat):
     off = 'sgprScalarGlobalReadOffset' + mat
     mat_stride = 'sgprStrides' + mat
     vw = conf[mat + '_VW']
+    wg = 'sgprWorkGroup%d' % (0 if mat == A else 1)
 
     # start read address of wave
     mt = conf['mt']['h'] if mat == 'A' else conf['mt']['w']
     wrt.s_mul('s84', mat_stride, mt)
-    wrt.s_mul('s84', 'sgprWorkGroup0', 's84')
+    wrt.s_mul('s84', wg, 's84')
     wrt.vgpr2sgpr('sgprFetchSubGrpId', conf['vSIMDID'])
     wrt.s_mul('s85', mat_stride, int(mt / conf['mfma']['simd']))
     wrt.s_mul('s85', 'sgprFetchSubGrpId', 's85') # handle 16 rows per subgrp(wave)

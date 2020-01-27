@@ -13,16 +13,15 @@ from functools import partial
 
 def def_vars(conf, wrt):
     # sgpr & vgpr variables
-    wrt.comments('Define SGPR & VGPR variables')
     for k in ['sregs', 'vregs']:
-        wrt.write_line("// %s define" % k)
+        wrt.comments('Define %s variables' % k)
         for k, v in conf[k].items():
             wrt.def_var(k, v)
         wrt.empty_line()
 
     wrt.def_var('BufferLimit', 0x80000000, cmt='2GB limit - set offsets to -1 to exceed this and clamp')
     wrt.def_var('Srd127_96', 0x20000, cmt='Bits 127:96 of SRD.  Set DataFormat = 32 bit')
-    wrt.def_var('roundMaskVal', 0xffff0000)
+    wrt.def_var('roundMaskVal', 0xffff0000, nl=True)
 
     # lds variables
     pad = 8
@@ -381,6 +380,7 @@ def local_address_assignment(conf, wrt, mat):
     wave_sz = 'varlds_%ssize_per_wave' % mat
     k = conf['mfma']['k']
 
+    # all wave load the same A, 4 wave load 4 B
     # map thread to lds, map to 32 lanes
     wrt.v_mask('v1', conf['vWFTID'], '0x1f') # mask 32
     wrt.v_mul(src, 32, 'v1', dtype='u32', nl=True)
@@ -409,7 +409,7 @@ def local_address_assignment(conf, wrt, mat):
     wrt.empty_line()
 
 
-def calc_global_addressCD(conf, wrt):
+def calc_global_addressC(conf, wrt):
     wrt.comments('Global Address C calculation')
 
     set_addr_desc(wrt, 'C')
@@ -464,6 +464,49 @@ def calc_global_addressCD(conf, wrt):
     # add x dim MT offset to src variable
     wrt.v_add('vgprTmp', 's84', 'v6', carry_out=True, dtype='u32')
     wrt.v_add_lshl(src, 'vgprTmp', 'vgprTmp+1', 1, cmt='base_addr = wave_start+row_start scaled by BPE', nl=True)
+    wrt.empty_line()
+
+
+def matmul(conf, wrt):
+    # mfma k == 8, 2 threads per lane, 1 thread read 4 elements
+    # wait for LDS ready
+    wrt.barrier(cmt='wait for LDS A ready')
+
+    next_grp = 'varlds_Asize_per_wr * 8' # *2 == scale bpe
+
+    # read A from LDS
+    wrt.ds_read(('vgprValuA_X0_I0', 0, 1), 'vgprLocalReadAddrA', 0)
+    wrt.ds_read(('vgprValuA_X0_I0+8', 0, 1), 'vgprLocalReadAddrA', next_grp + ' + 0')
+    func_list = [partial(wrt.ds_read, ('vgprValuA_X0_I0', 'i', 'i+1'), 'vgprLocalReadAddrA', '(i/2) * 16'),
+            partial(wrt.ds_read, ('vgprValuA_X0_I0+8', 'i', 'i+1'), 'vgprLocalReadAddrA', next_grp + ' + (i/2) * 16')]
+    wrt.for_loop((32 / 8) - 1, func_list, start=2, step=2)
+
+    wrt.barrier(cmt='wait for LDS B ready')
+
+    wrt.ds_read(('vgprValuB_X0_I0', 0, 1), 'vgprLocalReadAddrB', 0)
+    wrt.ds_read(('vgprValuB_X0_I0', 2, 3), 'vgprLocalReadAddrB', 16)
+    wrt.waitcnt(1, 'lgkm')
+    wrt.v_mfma('vgprAcc', 'vgprValuA_X0_I0', 'vgprValuB_X0_I0', 'vgprAcc')
+    wrt.ds_read(('vgprValuB_X0_I0', 4, 5), 'vgprLocalReadAddrB', 32)
+    wrt.ds_read(('vgprValuB_X0_I0', 6, 7), 'vgprLocalReadAddrB', 48)
+    wrt.waitcnt(2, 'lgkm')
+    wrt.v_mfma('vgprAcc+16', 'vgprValuA_X0_I0+8', 'vgprValuB_X0_I0', 'vgprAcc+16')
+    wrt.v_mfma('vgprAcc', 'vgprValuA_X0_I0+2', 'vgprValuB_X0_I0+2', 'vgprAcc')
+    wrt.v_mfma('vgprAcc+16', 'vgprValuA_X0_I0+8+2', 'vgprValuB_X0_I0+2', 'vgprAcc+16')
+
+    wrt.ds_read(('vgprValuB_X0_I0', 4, 5), 'vgprLocalReadAddrB', 32)
+    wrt.ds_read(('vgprValuB_X0_I0', 6, 7), 'vgprLocalReadAddrB', 48)
+
+    func_list = [partial(wrt.ds_read, ('vgprValuB_X0_I0', 'i', 'i+1'), 'vgprLocalReadAddrB', '(i/2) * 16'),
+            partial(wrt.ds_read, ('vgprValuB_X0_I0+8', 'i', 'i+1'), 'vgprLocalReadAddrB', next_grp + ' + (i/2) * 16')]
+    wrt.for_loop((32 / 8) - 1, func_list, start=2, step=2)
+
+    wrt.write_line('for var i = 0, j = 0; i < 30; i++, j++')
+    wrt.ds_read(('vgprValuB_X0_I0', 6, 7), 'vgprLocalReadAddrB', 48, tab=2)
+    wrt.write_line('end')
+    
+
+
 
 
 def def_mac(conf, wrt):
@@ -484,10 +527,9 @@ def def_mac(conf, wrt):
 
     wrt.waitcnt(0, itype='lgkm', nl=True)
 
-    calc_global_addressCD(conf, wrt)
+    calc_global_addressC(conf, wrt)
 
-    # wait for LDS A[0] ready
-    wrt.barrier()
+    matmul(conf, wrt)
 
 
 class GFX9Writer():
@@ -523,8 +565,8 @@ class GFX9Writer():
     def def_var(self, name, val, **kwargs):
         self.write_line('var ' + name + ' = ' + str(val), tab=0, **kwargs)
 
-    def barrier(self, nl=False):
-        self.write_line('s_barrier', tab=1, nl=nl)
+    def barrier(self, **kwargs):
+        self.write_line('s_barrier', tab=1, **kwargs)
 
     def setprio(self, prio, nl=False):
         self.write_line('s_setprio %d' % prio, tab=1, nl=nl)
@@ -651,12 +693,13 @@ class GFX9Writer():
     def cvt2byte(self, var, **kwargs):
         self.v_lshl(var, 1, var, **kwargs)
 
-    def for_loop(self, loops, func_list, start=0, idxs='i,j,k,l,m,n', tab=1, nl=True):
+    def for_loop(self, loops, func_list, start=0, step=1, idxs='i,j,k,l,m,n', tab=1, nl=True):
         loops, func_list = listify(loops), listify(func_list)
         idxs = idxs.split(',')
         for i, k in enumerate(loops):
             idx = idxs[i]
-            self.write_line('for var %s = %d; %s < %d; %s++' % (idx, start, idx, k, idx), tab=tab)
+            self.write_line('for var %s = %d; %s < %d; %s += %d' % (idx, start, idx,
+                k * step, idx, step), tab=tab)
             tab += 1
         for o in func_list: o(tab=tab+1)
         for i in range(len(loops)):
@@ -668,6 +711,14 @@ class GFX9Writer():
     def v_accvgpr(self, dest, src0, src1, itype='read', **kwargs):
         dest, src0, src1 = reg_str(dest), reg_str(src0), reg_str(src1)
         self.write_line('v_accvgpr_%s\t%s, %s, %s' % (itype, dest, src0, src1), **kwargs)
+
+    def ds_read(self, dest, src, off, dtype='b64', **kwargs):
+        dest, src = reg_str(dest), reg_str(src)
+        self.write_line('ds_read_%s\t%s, %s offset:%s' % (dtype, dest, src, off), **kwargs)
+
+    def v_mfma(self, dest, src0, src1, src2, dtype='f32_32x32x8f16', **kwargs):
+        dest, src0, src1, src2 = reg_str(dest), reg_str(src0), reg_str(src1), reg_str(src2)
+        self.write_line('v_mfma_%s\t%s, %s, %s, %s' % (dtype, dest, src0, src1, src2), **kwargs)
 
 
 if __name__ == "__main__":

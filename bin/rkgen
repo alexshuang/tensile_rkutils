@@ -193,7 +193,7 @@ def global_address_assignment(conf, wrt, mat):
     off = 'sgprScalarGlobalReadOffset' + mat
     mat_stride = 'sgprStrides' + mat
     vw = conf[mat + '_VW']
-    wg = 'sgprWorkGroup%d' % (0 if mat == A else 1)
+    wg = 'sgprWorkGroup%d' % (0 if mat == 'A' else 1)
 
     # start read address of wave
     mt = conf['mt']['h'] if mat == 'A' else conf['mt']['w']
@@ -365,15 +365,10 @@ def def_fetch(conf, wrt):
     do_fetch(conf, wrt)
 
 
-def init_accvgpr(wrt, i, **kwargs):
-    wrt.write_line('v_accvgpr_write\t%s, 0, 0' % reg_str('vgprAcc', i), **kwargs)
-
-
 def listify(d):
     if isinstance(d, list): return d
     if isinstance(d, tuple): return list(d)
     return [d]
-
 
 
 def local_address_assignment(conf, wrt, mat):
@@ -417,7 +412,7 @@ def local_address_assignment(conf, wrt, mat):
 def def_mac(conf, wrt):
     wrt.label('wave0_MAC')
     wrt.comments('hide all kern args load latency with ACC VGPR initialization')
-    wrt.for_loop(32, partial(init_accvgpr, wrt, 'i'))
+    wrt.for_loop(32, partial(wrt.v_accvgpr, ('vgprAcc', 'i'), 0, 0, itype='write'))
 
     load_karg(conf, wrt, 'sgprTensor2dSizeC', 2)
     load_karg(conf, wrt, 'sgprAlpha', 4)
@@ -599,6 +594,10 @@ class GFX9Writer():
             if tab <= 0: break
             self.write_line('end', tab=tab)
         if nl: self.empty_line()
+
+    def v_accvgpr(self, dest, src0, src1, itype='read', **kwargs):
+        dest, src0, src1 = reg_str(dest), reg_str(src0), reg_str(src1)
+        self.write_line('v_accvgpr_%s\t%s, %s, %s' % (itype, dest, src0, src1), **kwargs)
 
 
 if __name__ == "__main__":

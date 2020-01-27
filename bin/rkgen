@@ -409,6 +409,63 @@ def local_address_assignment(conf, wrt, mat):
     wrt.empty_line()
 
 
+def calc_global_addressCD(conf, wrt):
+    wrt.comments('Global Address C calculation')
+
+    set_addr_desc(wrt, 'C')
+    set_addr_desc(wrt, 'D')
+
+    mt = (conf['mt']['h'], conf['mt']['w'])
+    wg = ('sgprWorkGroup0', 'sgprWorkGroup1', 'sgprWorkGroup2')
+    strideC = ('sgprStridesC', 'sgprStridesC+1')
+    srdC = ('sgprSrdC', 'sgprSrdC+1')
+    srdD = ('sgprSrdD', 'sgprSrdD+1')
+    src = 'vgprGlobalWriteOfvarC'
+
+    # calc MT offset on y dim
+    wrt.s_mul('s86', mt[1], wg[1])
+    wrt.s_mul('s85', 's86', strideC[0], hi=True, dtype='u32')
+    wrt.s_mul('s84', 's86', strideC[0])
+    wrt.s_lshl('s[84:85]', 's[84:85]', 1, dtype='b64')
+
+    # add MT offset (y dim)
+    wrt.s_add(srdC[0], srdC[0], 's84', dtype='u32')
+    wrt.s_add(srdC[1], srdC[1], 's85', carry_out=True, dtype='u32')
+    wrt.s_add(srdD[0], srdD[0], 's84', dtype='u32')
+    wrt.s_add(srdD[1], srdD[1], 's85', carry_out=True, dtype='u32', nl=True)
+    
+    # calc MT offset on z dim 
+    wrt.s_mul('s85', wg[2], strideC[1], hi=True, dtype='u32')
+    wrt.s_mul('s84', wg[2], strideC[1])
+    wrt.s_lshl('s[84:85]', 's[84:85]', 1, dtype='b64')
+
+    # add MT offset (z dim)
+    wrt.s_add(srdC[0], srdC[0], 's84', dtype='u32')
+    wrt.s_add(srdC[1], srdC[1], 's85', carry_out=True, dtype='u32')
+    wrt.s_add(srdD[0], srdD[0], 's84', dtype='u32')
+    wrt.s_add(srdD[1], srdD[1], 's85', carry_out=True, dtype='u32', nl=True)
+
+    # use z dim to re-map threadIdx using for calculating waveId start off set for MAC wves to store 'C'
+    wrt.v_lshl(conf['vTID'], 6, conf['vWaveID'], cmt='threadIdx = simdId<<6')
+    wrt.v_add(conf['vTID'], conf['vWFTID'], conf['vTID'], dtype='u32', cmt='threadIdx = threadIdx + 0-63')
+    wrt.v_mul('v4', 32, conf['vWFTID'], dtype='u32', cmt='scale by sub-tile-size 32 (B-tile/128)')
+    wrt.v_mul('v3', 'v4', strideC[0], dtype='u32', cmt='wavestart vgpr')
+    wrt.v_mask('v4', '0x1f', conf['vTID'], cmt='vectorStaticDiv vgprTmp = vgprSerial % 31')
+    wrt.v_mul('v5', 'v4', strideC[0], dtype='u32', cmt='rowstart VGPR')
+    wrt.v_mask('v4', '0x3f', conf['vTID'], cmt='vectorStaticDiv vgprTmp = vgprSerial % 63')
+    wrt.v_lshr('v6', 5, 'v4', cmt='vectorStaticDiv vgprTmp = vgprSerial / 32')
+    wrt.v_lshr('v6', 2, 'v6', cmt='*4')
+    wrt.v_add('vgprTmp+1', 'v3', 'v5', dtype='u32')
+    wrt.empty_line()
+
+    # calc MT offset on x dim 
+    wrt.s_mul('s84', mt[0], wg[0])
+
+    # add x dim MT offset to src variable
+    wrt.v_add('vgprTmp', 's84', 'v6', carry_out=True, dtype='u32')
+    wrt.v_add_lshl(src, 'vgprTmp', 'vgprTmp+1', 1, cmt='base_addr = wave_start+row_start scaled by BPE', nl=True)
+
+
 def def_mac(conf, wrt):
     wrt.label('wave0_MAC')
     wrt.comments('hide all kern args load latency with ACC VGPR initialization')
@@ -426,6 +483,11 @@ def def_mac(conf, wrt):
     local_address_assignment(conf, wrt, 'B')
 
     wrt.waitcnt(0, itype='lgkm', nl=True)
+
+    calc_global_addressCD(conf, wrt)
+
+    # wait for LDS A[0] ready
+    wrt.barrier()
 
 
 class GFX9Writer():
@@ -527,6 +589,11 @@ class GFX9Writer():
         self.write_line('v_%s_%s\t%s, %s, %s' % (cmd, dtype, dest, src0,
             src1), **kwargs)
 
+    def vop3_instr(self, cmd, dtype, dest, src0, src1, src2, **kwargs):
+        dest, src0, src1, src2 = reg_str(dest), reg_str(src0), reg_str(src1), reg_str(src2)
+        self.write_line('v_%s_%s\t%s, %s, %s, %s' % (cmd, dtype, dest, src0,
+            src1, src2), **kwargs)
+
     def v_lsh(self, dest, src0, src1, dtype, ldir, **kwargs):
         self.vop2_instr('lshlrev' if ldir else 'lshrrev', dtype, dest, src0, src1, **kwargs)
 
@@ -552,6 +619,9 @@ class GFX9Writer():
 
     def v_mul(self, dest, src0, src1, dtype='i32', **kwargs):
         self.vop2_instr('mul_lo', dtype, dest, src0, src1, **kwargs)
+
+    def v_add_lshl(self, dest, src0, src1, src2, dtype='u32', **kwargs):
+        self.vop3_instr('add_lshl', dtype, dest, src0, src1, src2)
 
     def set_lds_addr(self, addr, **kwargs):
         self.s_mov('m0', addr, tab=1, nl=True, **kwargs)

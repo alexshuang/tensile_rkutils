@@ -263,78 +263,147 @@ def fetch2lds(conf, wrt, mat, base, k=32, it=1):
     wrt.empty_line()
 
 
-def wait4fetch(wrt, wf_prio=0):
-    vwA = conf['A_VW']
-    vwB = conf['B_VW']
+def mat_idx(mat):
+    if mat == 'A': return 0
+    elif mat == 'B': return 1
 
-    # wait for A[0]
-    wrt.waitcnt(2 * vwB + vwA, 'vm')
-    if wf_prio > 0:
-        wrt.setprio(wf_prio)
-    wrt.barrier() 
-    if wf_prio > 0:
-        wrt.setprio(0)
 
-    # wait for B[0]
-    wrt.waitcnt(vwB + vwA, 'vm')
-    if wf_prio > 0:
-        wrt.setprio(wf_prio)
-    wrt.barrier() 
-    if wf_prio > 0:
-        wrt.setprio(0)
+class Data():
+    def __init__(self, conf, wrt, mat):
+        self.conf, self.wrt, self.mat = conf, wrt, mat
+        self.global_read_dest_addr = 'vgprG2L' + mat
+        self.global_read_src_addr = 'vgprGlobalReadOfvar' + mat
+        self.global_read_offset = 'sgprScalarGlobalReadOffset' + mat
+        self.local_write_addr = ('sgprLocalWriteAddr' + mat, 'sgprLocalWriteAddr%s+1' % mat)
+        self.local_read_addr = 'vgprLocalReadAddr' + mat
+        self.src = 'sgprAddress' + mat
+        self.src_desc = 'sgprSrd' + mat
+        self.simd_id = 'sgprFetchSubGrpId'
+        self.stride = ('sgprStrides' + mat, 'sgprStrides%s+1' % mat)
+        self.vw = conf[mat + '_VW']
+        self.wg = ('sgprWorkGroup0', 'sgprWorkGroup1', 'sgprWorkGroup2')
+        self.sz_per_wr = 'varlds_%ssize_per_wr' % mat
+        self.sz_per_wave = 'varlds_%ssize_per_wave' % mat
+        self.lds_base_addr = 'var%s_lds_base_addr' % mat
+        self.vmcnt = 0
 
+    def global_address(self):
+        self.wrt.comments('Global Address Assignment of %s' % self.mat, bar=True, nl=True)
+
+        self.wrt.comments('resource descriptor')
+        self.wrt.s_mov(self.src_desc, self.src, cmt='sgpr[0-1] - base address')
+        self.wrt.s_mov((self.src_desc, 1), (self.src, 1))
+        self.wrt.s_mov((self.src_desc, 2), 'BufferLimit', cmt='sgpr[2]   - limit')
+        self.wrt.s_mov((self.src_desc, 3), 'Srd127_96', cmt='sgpr[3]   - attributes')
+        self.wrt.empty_line()
+
+        # start address of workgroup
+        wg_addr, wave_addr = 's84', 's85'
+        mt = self.conf['mt']['h'] if self.mat == 'A' else self.conf['mt']['w']
+        wg = self.wg[0] if self.mat == 'A' else self.wg[1]
+        lines_per_wave = mt // 4
+        lvca = self.conf['lvca']
+        tid = self.conf['vWFTID']
+
+        self.wrt.comments('%s: address of workgroup' % wg_addr)
+        self.wrt.s_mul(wg_addr, self.stride[0], mt)
+        self.wrt.s_mul(wg_addr, wg, wg_addr)
+
+        self.wrt.comments('%s: address of wave' % wave_addr)
+        self.wrt.s_mul(wave_addr, self.stride[0], lines_per_wave)
+        self.wrt.s_mul(wave_addr, self.simd_id, wave_addr)
+        self.wrt.s_add(wave_addr, wg_addr, wave_addr)
+
+        lane_id, tile_addr, lane_addr = 'v0', 'v1', 'v4'
+
+        self.wrt.comments('%s: address of lane' % lane_addr)
+        self.wrt.comments('LVCA=%d' % lvca)
+        self.wrt.v_lshr(lane_id, to_shift_bit(lvca), tid)
+        self.wrt.v_mul(lane_addr, self.stride[0], lane_id, dtype='u32')
+
+        self.wrt.comments('%s: address of tile' % tile_addr)
+        self.wrt.v_mask(tile_addr, lvca - 1, tid)
+        self.wrt.v_lshl(tile_addr, 1, tile_addr, cmt='1 dword == 2 elements')
+
+        self.wrt.comments('%s: address of global address' % self.global_read_src_addr)
+        self.wrt.v_add(self.global_read_src_addr, lane_addr, tile_addr, dtype='u32', carry_out=True)
+        self.wrt.v_add(self.global_read_src_addr, self.global_read_src_addr, wave_addr, dtype='u32')
+        self.wrt.cvt2byte(self.global_read_src_addr)
+
+        self.wrt.empty_line()
+
+        self.wrt.comments('%s: offset of vector width' % self.global_read_offset)
+        self.wrt.comments('vw=-1')
+        # 4 lanes * 2 bytes per element, next read from 5th lane
+        self.wrt.s_lshl(self.global_read_offset, self.stride[0], 3) 
+        self.wrt.s_sub(self.global_read_offset, self.global_read_offset, self.sz_per_wr, dtype='u32')
+        for i in range(1, self.vw):
+            self.wrt.v_add((self.global_read_src_addr, i), self.global_read_offset,
+                    (self.global_read_src_addr, i - 1))
+        self.wrt.empty_line()
+
+        self.wrt.comments('set local write address')
+        self.wrt.s_mov(self.local_write_addr[0], self.sz_per_wave)
+        self.wrt.s_mul(self.local_write_addr[0], self.simd_id, self.local_write_addr[0])
+        self.wrt.s_add(self.local_write_addr[0], self.local_write_addr[0], self.lds_base_addr)
+        self.wrt.s_add(self.local_write_addr[1], self.local_write_addr[0], self.sz_per_wave)
+        self.lds_ptr = self.local_write_addr[0]
+        self.wrt.empty_line()
+
+    def global_fetch(self):
+        self.wrt.comments('fetch %s to lds' % self.mat)
+        self.update_lds_ptr()
+        for i in range(self.vw):
+            offset = '%s * %d' % (self.sz_per_wr, i)
+            self.wrt.buffer_load((self.global_read_dest_addr, i), (self.global_read_src_addr, i),
+                    (self.src_desc, 0, 3), lds=1, offset=offset)
+        self.vmcnt += self.vw
+        self.wrt.empty_line()
+
+    def update_lds_ptr(self):
+        self.wrt.comments('set lds base address to %s' % self.lds_ptr)
+        self.wrt.set_lds_addr(self.lds_ptr)
+        self.lds_ptr = self.local_write_addr[1] if self.lds_ptr == self.local_write_addr[0] else self.local_write_addr[0]
+
+    def global_inc_fetch_addr(self, prio=0):
+        self.wrt.comments('increment global address of %s to next iteration' % self.mat)
+        # update to next iteration 
+        if prio:
+            self.wrt.setprio(prio)
+        for i in range(self.vw):
+            self.wrt.v_add((self.global_read_src_addr, i), 64, (self.global_read_src_addr, i))
+        if prio:
+            self.wrt.setprio(0)
+        self.wrt.empty_line()
+
+    def wait4fetch(self):
+        self.wrt.waitcnt(20 if self.mat == 'A' else 12, 'vm')
+        self.wrt.barrier(cmt='wait for LDS %s' % self.mat) 
+        self.wrt.empty_line()
+
+
+def unroll_fetch(wrt, mat_a, mat_b):
+    wrt.barrier(cmt='wait for LDS A[0] & B[0]')
     wrt.empty_line()
 
+    wrt.comments('unroll 0')
+    mat_a.global_fetch()
+    mat_b.global_fetch()
+    mat_a.wait4fetch()
+    mat_a.global_inc_fetch_addr(prio=1)
+    mat_b.wait4fetch()
+    mat_b.global_inc_fetch_addr(prio=1)
 
-def do_fetch(conf, wrt):
-    baseA1 = 'sgprLocalWriteAddrA'
-    baseA2 = 'sgprLocalWriteAddrA+1'
-    baseB1 = 'sgprLocalWriteAddrB'
-    baseB2 = 'sgprLocalWriteAddrB+1'
-    wrt.s_add(baseA2, baseA1, 'varlds_Asize_per_wg', dtype='u32')
-    wrt.s_add(baseB2, baseB1, 'varlds_Bsize_per_wg', dtype='u32')
-    prefetch = conf['prefetch']
-    vwA = conf['A_VW']
-    vwB = conf['B_VW']
-
-    if prefetch:
-        fetch2lds(conf, wrt, 'A', baseA1)
-        fetch2lds(conf, wrt, 'B', baseB1)
-        fetch2lds(conf, wrt, 'A', baseA2)
-        fetch2lds(conf, wrt, 'B', baseB2)
-        wait4fetch(wrt)
-
-    lcnt = 'sgprLoopCounters'
-    wrt.s_lshr(lcnt, 'sgprSizesSum', 5) # k=32
-    wrt.s_sub(lcnt, 0, lcnt)
-    if prefetch:
-        wrt.s_add(lcnt, 2, lcnt, dtype='i32')
+    wrt.barrier(cmt='wait for LDS A[1] & B[1]')
     wrt.empty_line()
 
-    wrt.label('unroll_fetch')
-
-    fetch2lds(conf, wrt, 'A', baseA1)
-    fetch2lds(conf, wrt, 'B', baseB1)
-    wait4fetch(wrt, 1)
-    wrt.s_add(lcnt, 1, lcnt, dtype='u32')
-    wrt.empty_line()
-
-    fetch2lds(conf, wrt, 'A', baseA2)
-    fetch2lds(conf, wrt, 'B', baseB2)
-    wait4fetch(wrt, 1)
-    wrt.s_add(lcnt, 1, lcnt, dtype='u32')
-    wrt.empty_line()
-
-    wrt.s_cmp('sgprLoopCounters', 0, dtype='i32')
-    wrt.s_cbranch('unroll_fetch', eq=False)
-    wrt.empty_line()
-
-    wrt.label('finish_fetch')
-    wrt.waitcnt(8, itype='vm')
-    wrt.barrier()
-    wrt.waitcnt(0, itype='vm')
-    wrt.barrier()
-    wrt.end_pgm()
+    wrt.comments('unroll 1')
+    mat_a.global_fetch()
+    mat_b.global_fetch()
+    mat_a.wait4fetch()
+    mat_a.global_inc_fetch_addr(prio=1)
+    mat_b.wait4fetch()
+    mat_b.global_inc_fetch_addr(prio=1)
     wrt.empty_line()
 
 
@@ -357,11 +426,42 @@ def def_fetch(conf, wrt):
     wrt.waitcnt(0, 'lgkm')
     wrt.empty_line()
 
-    # global address of A/B
-    global_address_assignment(conf, wrt, 'A')
-    global_address_assignment(conf, wrt, 'B')
+    mat_a = Data(conf, wrt, 'A')
+    mat_b = Data(conf, wrt, 'B')
 
-    do_fetch(conf, wrt)
+    mat_a.global_address()
+    mat_b.global_address()
+
+    wrt.comments('Global Fetch A/B', bar=True, nl=True)
+    wrt.barrier(cmt='sync up for global fetch')
+    wrt.empty_line()
+
+    # A[0], B[0]
+    mat_a.global_fetch()
+    mat_b.global_fetch()
+    mat_a.global_inc_fetch_addr()
+    mat_b.global_inc_fetch_addr()
+
+    # A[1], B[1]
+    mat_a.global_fetch()
+    mat_b.global_fetch()
+    mat_a.global_inc_fetch_addr()
+    mat_b.global_inc_fetch_addr()
+
+    mat_a.wait4fetch()
+    mat_b.wait4fetch()
+
+    wrt.unroll('unroll_fetch', partial(unroll_fetch, wrt, mat_a, mat_b), end=-2, step=2)
+
+    # finish fetch
+    wrt.waitcnt(8, 'vm')
+    wrt.barrier()
+    wrt.waitcnt(0, 'vm')
+    wrt.barrier()
+    wrt.empty_line()
+    wrt.end_pgm()
+    wrt.empty_line()
+    wrt.empty_line()
 
 
 def listify(d):
@@ -475,38 +575,29 @@ def matmul(conf, wrt):
     next_grp = 'varlds_Asize_per_wr * 8' # *2 == scale bpe
 
     # read A from LDS
-    wrt.ds_read(('vgprValuA_X0_I0', 0, 1), 'vgprLocalReadAddrA', 0)
-    wrt.ds_read(('vgprValuA_X0_I0+8', 0, 1), 'vgprLocalReadAddrA', next_grp + ' + 0')
-    func_list = [partial(wrt.ds_read, ('vgprValuA_X0_I0', 'i', 'i+1'), 'vgprLocalReadAddrA', '(i/2) * 16'),
-            partial(wrt.ds_read, ('vgprValuA_X0_I0+8', 'i', 'i+1'), 'vgprLocalReadAddrA', next_grp + ' + (i/2) * 16')]
-    wrt.for_loop((32 / 8) - 1, func_list, start=2, step=2)
+    k = conf['mfma']['k']
+    wrt.setprio(1)
+    for i, j in enumerate(range(int(conf['k'] / k))):
+        j *= 2
+        wrt.ds_read(('vgprValuA_X0_I0', j, j + 1), 'vgprLocalReadAddrA', i * 16)
+        wrt.ds_read(('vgprValuA_X0_I0+%d' % k, j, j + 1), 'vgprLocalReadAddrA', next_grp + ' + ' + str(i * 16))
+    wrt.setprio(0)
+    wrt.empty_line()
 
+    wrt.waitcnt(0, 'lgkm')
     wrt.barrier(cmt='wait for LDS B ready')
 
-    wrt.ds_read(('vgprValuB_X0_I0', 0, 1), 'vgprLocalReadAddrB', 0)
-    wrt.ds_read(('vgprValuB_X0_I0', 2, 3), 'vgprLocalReadAddrB', 16)
-    wrt.waitcnt(1, 'lgkm')
-    wrt.v_mfma('vgprAcc', 'vgprValuA_X0_I0', 'vgprValuB_X0_I0', 'vgprAcc')
-    wrt.ds_read(('vgprValuB_X0_I0', 4, 5), 'vgprLocalReadAddrB', 32)
-    wrt.ds_read(('vgprValuB_X0_I0', 6, 7), 'vgprLocalReadAddrB', 48)
-    wrt.waitcnt(2, 'lgkm')
-    wrt.v_mfma('vgprAcc+16', 'vgprValuA_X0_I0+8', 'vgprValuB_X0_I0', 'vgprAcc+16')
-    wrt.v_mfma('vgprAcc', 'vgprValuA_X0_I0+2', 'vgprValuB_X0_I0+2', 'vgprAcc')
-    wrt.v_mfma('vgprAcc+16', 'vgprValuA_X0_I0+8+2', 'vgprValuB_X0_I0+2', 'vgprAcc+16')
-
-    wrt.ds_read(('vgprValuB_X0_I0', 4, 5), 'vgprLocalReadAddrB', 32)
-    wrt.ds_read(('vgprValuB_X0_I0', 6, 7), 'vgprLocalReadAddrB', 48)
-
-    func_list = [partial(wrt.ds_read, ('vgprValuB_X0_I0', 'i', 'i+1'), 'vgprLocalReadAddrB', '(i/2) * 16'),
-            partial(wrt.ds_read, ('vgprValuB_X0_I0+8', 'i', 'i+1'), 'vgprLocalReadAddrB', next_grp + ' + (i/2) * 16')]
-    wrt.for_loop((32 / 8) - 1, func_list, start=2, step=2)
-
-    wrt.write_line('for var i = 0, j = 0; i < 30; i++, j++')
-    wrt.ds_read(('vgprValuB_X0_I0', 6, 7), 'vgprLocalReadAddrB', 48, tab=2)
-    wrt.write_line('end')
-    
-
-
+    wrt.setprio(1)
+    for i, j in enumerate(range(int(conf['k'] / k))):
+        j *= 2
+        wrt.ds_read(('vgprValuB_X0_I0', j, j + 1), 'vgprLocalReadAddrB', i * 16)
+        wrt.waitcnt(0, 'lgkm')
+        wrt.v_mfma('vgprAcc', ('vgprValuA_X0_I0', j), ('vgprValuB_X0_I0', j), 'vgprAcc')
+        wrt.ds_read(('vgprValuB_X0_I0', j + 2, j + 3), 'vgprLocalReadAddrB', i * 16)
+        wrt.waitcnt(0, 'lgkm')
+        wrt.v_mfma('vgprAcc+16', ('vgprValuA_X0_I0+%d' % k, j), ('vgprValuB_X0_I0', j), 'vgprAcc+16')
+    wrt.empty_line()
+    wrt.setprio(0)
 
 
 def def_mac(conf, wrt):
@@ -720,6 +811,16 @@ class GFX9Writer():
         dest, src0, src1, src2 = reg_str(dest), reg_str(src0), reg_str(src1), reg_str(src2)
         self.write_line('v_mfma_%s\t%s, %s, %s, %s' % (dtype, dest, src0, src1, src2), **kwargs)
 
+    def unroll(self, label_name, cb, cnt='sgprLoopCounters', total_sz='sgprSizesSum', k=32, end=0, step=1):
+        self.s_lshr(cnt, total_sz, to_shift_bit(k))
+        self.s_sub(cnt, 0, cnt, nl=True)
+        self.label(label_name)
+        cb()
+        self.s_add(cnt, step, cnt, dtype='u32')
+        self.s_cmp(cnt, end, dtype='i32')
+        self.s_cbranch(label_name, eq=False)
+        self.empty_line()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -741,7 +842,7 @@ if __name__ == "__main__":
         def_vars(conf, writer)
         def_header(conf, writer)
         def_fetch(conf, writer)
-        def_mac(conf, writer)
+        #def_mac(conf, writer)
         def_footer(conf, writer)
 
     print("[Output]: %s" % out_fpath)

@@ -100,5 +100,6 @@
         "w": 128
     },
     "k": 32,
+	"thread_tile": 4,
 	"prefetch": 1
 }

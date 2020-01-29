@@ -145,122 +145,12 @@ def create_branch(wrt, label, var, val, eq=False):
     wrt.empty_line()
 
 
-def set_addr_desc(wrt, mat):
-    '''
-    Global read addresses: address A resource descriptor set-up
-    sgpr[0-1] - base address
-    sgpr[2]   - limit
-    sgpr[3]   - attributes
-    '''
-    src = 'sgprAddress' + mat
-    dest = 'sgprSrd' + mat
-    wrt.s_mov(dest, src)
-    # (dest, 1) == dest+1
-    wrt.s_mov((dest, 1), (src, 1))
-    '''
-    s_mov(fp, 'sgprShadowLimitA', 'sgprTensor2dSizeA', 'u32')
-    s_mov(fp, 'sgprShadowLimitA+1', 'sgprTensor2dSizeA', 'u32')
-    # convert to bytes
-    s_lsh(fp, 'sgprShadowLimitA', 'sgprShadowLimitA', 1, ldir=True, dtype='b64')
-    # pad by 4
-    s_add(fp, 'sgprShadowLimitA', 'sgprShadowLimitA', 4, dtype='u32')
-    s_add(fp, 'sgprShadowLimitA+1', 'sgprShadowLimitA+1', 0, carry_out=True, dtype='u32')
-    s_cmp(fp, 'sgprShadowLimitA+1', 0)
-    s_cselect(fp, 'sgprSrdA+2', 'sgprShadowLimitA', 'BufferLimit')
-    '''
-    wrt.s_mov((dest, 2), 'BufferLimit')
-    wrt.s_mov((dest, 3), 'Srd127_96')
-    wrt.empty_line()
-
-
 def to_shift_bit(val):
     b, s = 0, 1
     while s < val:
         s *= 2
         b += 1
     return b
-
-
-def global_address_assignment(conf, wrt, mat):
-    wrt.comments('global address of %s' % mat)
-
-    # set address A descriptor
-    set_addr_desc(wrt, mat)
-
-    dest = 'sgprLocalWriteAddr' + mat
-    src = 'vgprGlobalReadOfvar' + mat
-    off = 'sgprScalarGlobalReadOffset' + mat
-    mat_stride = 'sgprStrides' + mat
-    vw = conf[mat + '_VW']
-    wg = 'sgprWorkGroup%d' % (0 if mat == 'A' else 1)
-
-    # start read address of wave
-    mt = conf['mt']['h'] if mat == 'A' else conf['mt']['w']
-    wrt.s_mul('s84', mat_stride, mt)
-    wrt.s_mul('s84', wg, 's84')
-    wrt.vgpr2sgpr('sgprFetchSubGrpId', conf['vSIMDID'])
-    wrt.s_mul('s85', mat_stride, int(mt / conf['mfma']['simd']))
-    wrt.s_mul('s85', 'sgprFetchSubGrpId', 's85') # handle 16 rows per subgrp(wave)
-    wrt.s_add('s84', 's84', 's85')
-
-    wrt.empty_line()
-
-    # tile offset assignment
-    tid = conf['vWFTID']
-    glvw = conf['glvw']
-    lvca = conf['lvca']
-    wrt.comments('LVCA=%d, vw=-1' % lvca)
-    wrt.v_lshr('v0', to_shift_bit(lvca), tid)
-    wrt.v_mul('v4', mat_stride, 'v0', dtype='u32')
-    wrt.v_mask('v1', lvca - 1, tid)
-    wrt.cvt2byte('v1')
-    wrt.v_add(src, 'v4', 'v1', dtype='u32', carry_out=True)
-    wrt.v_add(src, src, 's84', dtype='u32')
-    wrt.cvt2byte(src, nl=True)
-
-    wrt.s_lshl(off, mat_stride, 3) # 4 lines * 2 bytes per element
-    wrt.s_sub(off, off, 'varlds_%ssize_per_wr' % mat, dtype='u32')
-    wrt.for_loop(vw, partial(wrt.v_add, var_str(src, 'i'), off,
-        var_str(src, 'i-1'), dtype='u32'), start=1)
-    
-    wrt.comments('global memory to lds address')
-    wrt.s_mov(dest, 'varlds_%ssize_per_wave' % mat)
-    wrt.s_mul(dest, 'sgprFetchSubGrpId', dest)
-    wrt.s_add(dest, dest, 'var%s_lds_base_addr' % mat, dtype='i32')
-    wrt.empty_line()
-
-
-def fetch2lds(conf, wrt, mat, base, k=32, it=1):
-    wrt.comments('fetch %s to lds' % mat)
-
-    dest = 'vgprG2L' + mat
-    off = 'vgprGlobalReadOfvar' + mat
-    src_desc = 'sgprSrd' + mat
-    vw = conf[mat + '_VW']
-    wr_sz = 'varlds_%ssize_per_wr' % mat
-
-    '''
-    for i in range(it):
-        set_lds_addr(fp, addr)
-        for i in range(vw):
-            offset = '%s * %d' % (wr_sz, i)
-            buffer_load(fp, (dest, i), (off, i), (src_desc, 0, 3), lds=1, offset=offset)
-        # update off to next iteration 
-        for i in range(vw):
-            v_add(fp, (off, i), 64, (off, i))
-        #update lds addr
-        s_add(fp, addr, addr, it_sz)
-        wrt.empty_line()
-    '''
-    for i in range(it):
-        wrt.set_lds_addr(base)
-        func = partial(wrt.buffer_load, var_str(dest, 'i'), var_str(off, 'i'),
-                src_desc, lds=1, offset='%s * i' % wr_sz)
-        wrt.for_loop(vw, func)
-        # update off to next iteration 
-        func = partial(wrt.v_add, var_str(off, 'i'), 64, var_str(off, 'i'))
-        wrt.for_loop(vw, func)
-    wrt.empty_line()
 
 
 def mat_idx(mat):
@@ -284,6 +174,7 @@ class Data():
         self.wg = ('sgprWorkGroup0', 'sgprWorkGroup1', 'sgprWorkGroup2')
         self.sz_per_wr = 'varlds_%ssize_per_wr' % mat
         self.sz_per_wave = 'varlds_%ssize_per_wave' % mat
+        self.sz_per_wg = 'varlds_%ssize_per_wg' % mat
         self.lds_base_addr = 'var%s_lds_base_addr' % mat
         self.vmcnt = 0
 
@@ -381,6 +272,50 @@ class Data():
         self.wrt.barrier(cmt='wait for LDS %s' % self.mat) 
         self.wrt.empty_line()
 
+    def local_address(self):
+        # all wave load the same A, 4 waves load 4 Bs
+        # map threads to 32 lanes on LDS
+        self.wrt.comments('Local Address Assignment of %s' % self.mat, bar=True, nl=True)
+        self.wrt.comments('%s: address of lane' % self.local_read_addr)
+        tid = 'v1'
+        self.wrt.v_mask(tid, self.conf['vWFTID'], '0x1f') # tid_wavefront mask 32, 2 threads per lane
+        self.wrt.v_mul(self.local_read_addr, 32, tid, dtype='u32') # map to column
+        self.wrt.empty_line()
+
+        # calc pad length
+        pad_len, pad = 'v2', 'varlds_pad'
+        self.wrt.comments('%s: padding length' % pad_len)
+        self.wrt.v_lshr(pad_len, 2, tid) # a pad follow by 4 wr
+        self.wrt.v_mul(pad_len, pad, pad_len, dtype='u32')
+        self.wrt.empty_line()
+
+        # 2 threads map to 1 lane, read threadtile elements per thread
+        tid_lane = 'v1'
+        self.wrt.comments('%s: address of threadtile' % self.local_read_addr)
+        self.wrt.v_lshr(tid_lane, 5, conf['vWFTID'])
+        self.wrt.v_lshl(tid_lane, to_shift_bit(conf['thread_tile']), tid_lane)
+        self.wrt.v_add(self.local_read_addr, tid_lane, self.local_read_addr, dtype='u32')
+        self.wrt.cvt2byte(self.local_read_addr)
+        self.wrt.empty_line()
+
+        # add pad
+        self.wrt.comments('add padding length')
+        self.wrt.v_add(self.local_read_addr, self.local_read_addr, pad_len, dtype='u32')
+        self.wrt.empty_line()
+
+        # address subgrp of B, 1 wave of A can boardcast to all 4 waves of B
+        if self.mat == 'B':
+            wave_addr = 's84'
+            self.wrt.comments('4 waves load 4 B, %s: address of wave' % wave_addr)
+            self.wrt.s_mul(wave_addr, self.simd_id, self.sz_per_wave)
+            self.wrt.v_add(self.local_read_addr, wave_addr, self.local_read_addr, dtype='u32')
+            self.wrt.empty_line()
+
+        # add title offset to base addr
+        self.wrt.v_add(self.local_read_addr, self.lds_base_addr, self.local_read_addr, dtype='u32')
+        self.wrt.v_add((self.local_read_addr, 1), self.sz_per_wg, self.local_read_addr, dtype='u32')
+        self.wrt.empty_line()
+
 
 def unroll_fetch(wrt, mat_a, mat_b):
     wrt.barrier(cmt='wait for LDS A[0] & B[0]')
@@ -407,7 +342,7 @@ def unroll_fetch(wrt, mat_a, mat_b):
     wrt.empty_line()
 
 
-def def_fetch(conf, wrt):
+def def_fetch(conf, wrt, mat_a, mat_b):
     # load A/B address, stridesA/B, sgprTensor2dSizeA/B, size L
     load_karg(conf, wrt, 'sgprAddressA', 4)
     load_karg(conf, wrt, 'sgprStridesA', 4)
@@ -425,9 +360,6 @@ def def_fetch(conf, wrt):
     # wait for load kern args
     wrt.waitcnt(0, 'lgkm')
     wrt.empty_line()
-
-    mat_a = Data(conf, wrt, 'A')
-    mat_b = Data(conf, wrt, 'B')
 
     mat_a.global_address()
     mat_b.global_address()
@@ -600,7 +532,7 @@ def matmul(conf, wrt):
     wrt.setprio(0)
 
 
-def def_mac(conf, wrt):
+def def_mac(conf, wrt, mat_a, mat_b):
     wrt.label('wave0_MAC')
     wrt.comments('hide all kern args load latency with ACC VGPR initialization')
     wrt.for_loop(32, partial(wrt.v_accvgpr, ('vgprAcc', 'i'), 0, 0, itype='write'))
@@ -611,16 +543,15 @@ def def_mac(conf, wrt):
     load_karg(conf, wrt, 'sgprAddressD', 4)
     wrt.empty_line()
 
-    wrt.comments('Local Read Addresses')
+    mat_a.local_address()
+    mat_b.local_address()
 
-    local_address_assignment(conf, wrt, 'A')
-    local_address_assignment(conf, wrt, 'B')
-
+    # wait for kern vars load
     wrt.waitcnt(0, itype='lgkm', nl=True)
 
-    calc_global_addressC(conf, wrt)
+    #calc_global_addressC(conf, wrt)
 
-    matmul(conf, wrt)
+    #matmul(conf, wrt)
 
 
 class GFX9Writer():
@@ -840,9 +771,12 @@ if __name__ == "__main__":
     with open(out_fpath, 'w') as fp:
         writer = GFX9Writer(fp)
         def_vars(conf, writer)
+        mat_a = Data(conf, writer, 'A')
+        mat_b = Data(conf, writer, 'B')
+        #mat_c = Data(conf, writer, 'C')
         def_header(conf, writer)
-        def_fetch(conf, writer)
-        #def_mac(conf, writer)
+        def_fetch(conf, writer, mat_a, mat_b)
+        def_mac(conf, writer, mat_a, mat_b)
         def_footer(conf, writer)
 
     print("[Output]: %s" % out_fpath)

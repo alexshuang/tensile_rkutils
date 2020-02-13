@@ -1,0 +1,29 @@
+	onnx-mims:è
+ª
+gpu_0/conv1_1
+gpu_0/layer1_input_weights
+gpu_0/layer1_recurrent_weights
+gpu_0/layer1_bias
+gpu_0/rnn1"Rnn*
+	direction"bidirectional†*
+activations"relu†*
+hidden_sizeÄ†deepspeech2*ËÄBgpu_0/conv1_1*&ÄÄBgpu_0/layer1_input_weights**ÄÄBgpu_0/layer1_recurrent_weights*ÄBgpu_0/layer1_biasZ%
+gpu_0/conv1_1
+
+Ë
+
+ÄZ2
+gpu_0/layer1_input_weights
+
+
+Ä
+ÄZ6
+gpu_0/layer1_recurrent_weights
+
+
+Ä
+ÄZ$
+gpu_0/layer1_bias
+	
+
+ÄB

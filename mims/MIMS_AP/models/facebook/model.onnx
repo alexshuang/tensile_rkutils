@@ -1,0 +1,133 @@
+	onnx-mims:‡
+[
+gpu_0/data_0
+	gpu_0/w_0
+	gpu_0/b_0gpu_0/fc_out_0"Gemm*
+	broadcast *
+transB 
+'
+gpu_0/fc_out_0gpu_0/act_out_0"Relu
+^
+gpu_0/act_out_0
+	gpu_0/w_1
+	gpu_0/b_1gpu_0/fc_out_1"Gemm*
+	broadcast *
+transB 
+'
+gpu_0/fc_out_1gpu_0/act_out_1"Relu
+^
+gpu_0/act_out_1
+	gpu_0/w_2
+	gpu_0/b_2gpu_0/fc_out_2"Gemm*
+	broadcast *
+transB 
+'
+gpu_0/fc_out_2gpu_0/act_out_2"Relu
+^
+gpu_0/act_out_2
+	gpu_0/w_3
+	gpu_0/b_3gpu_0/fc_out_3"Gemm*
+	broadcast *
+transB 
+'
+gpu_0/fc_out_3gpu_0/act_out_3"Relu
+^
+gpu_0/act_out_3
+	gpu_0/w_4
+	gpu_0/b_4gpu_0/fc_out_4"Gemm*
+	broadcast *
+transB 
+'
+gpu_0/fc_out_4gpu_0/act_out_4"Relu
+^
+gpu_0/act_out_4
+	gpu_0/w_5
+	gpu_0/b_5gpu_0/fc_out_5"Gemm*
+	broadcast *
+transB 
+'
+gpu_0/fc_out_5gpu_0/act_out_5"Relu
+^
+gpu_0/act_out_5
+	gpu_0/w_6
+	gpu_0/b_6gpu_0/fc_out_6"Gemm*
+	broadcast *
+transB 
+'
+gpu_0/fc_out_6gpu_0/act_out_6"Relu
+^
+gpu_0/act_out_6
+	gpu_0/w_7
+	gpu_0/b_7gpu_0/fc_out_7"Gemm*
+	broadcast *
+transB 
+'
+gpu_0/fc_out_7gpu_0/act_out_7"Relufacebook*€Bgpu_0/data_0*€€B	gpu_0/w_0*€B	gpu_0/b_0*€€B	gpu_0/w_1*€B	gpu_0/b_1*€€B	gpu_0/w_2*€B	gpu_0/b_2*€€B	gpu_0/w_3*€B	gpu_0/b_3*€€B	gpu_0/w_4*€B	gpu_0/b_4*€€B	gpu_0/w_5*€B	gpu_0/b_5*€€B	gpu_0/w_6*€B	gpu_0/b_6*€€B	gpu_0/w_7*€B	gpu_0/b_7Z
+gpu_0/data_0
+	
+
+€Z
+	gpu_0/w_0
+
+
+€
+€Z
+	gpu_0/b_0
+	
+€Z
+	gpu_0/w_1
+
+
+€
+€Z
+	gpu_0/b_1
+	
+€Z
+	gpu_0/w_2
+
+
+€
+€Z
+	gpu_0/b_2
+	
+€Z
+	gpu_0/w_3
+
+
+€
+€Z
+	gpu_0/b_3
+	
+€Z
+	gpu_0/w_4
+
+
+€
+€Z
+	gpu_0/b_4
+	
+€Z
+	gpu_0/w_5
+
+
+€
+€Z
+	gpu_0/b_5
+	
+€Z
+	gpu_0/w_6
+
+
+€
+€Z
+	gpu_0/b_6
+	
+€Z
+	gpu_0/w_7
+
+
+€
+€Z
+	gpu_0/b_7
+	
+€B

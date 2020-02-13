@@ -1,0 +1,72 @@
+	onnx-mims:€
+X
+gpu_0/data_0
+	gpu_0/w_0
+	gpu_0/b_0gpu_0/out_0"Gemm*
+	broadcast *
+transB 
+!
+gpu_0/out_0gpu_0/relu_0"Relu
+X
+gpu_0/relu_0
+	gpu_0/w_1
+	gpu_0/b_1gpu_0/out_1"Gemm*
+	broadcast *
+transB 
+!
+gpu_0/out_1gpu_0/relu_1"Relu
+X
+gpu_0/relu_3
+	gpu_0/w_4
+	gpu_0/b_4gpu_0/out_4"Gemm*
+	broadcast *
+transB 
+!
+gpu_0/out_4gpu_0/relu_4"Relu
+X
+gpu_0/relu_4
+	gpu_0/w_5
+	gpu_0/b_5gpu_0/out_5"Gemm*
+	broadcast *
+transB 
+'
+gpu_0/out_5gpu_0/sigmoid_5"Sigmoidcandle-p1b1-ae*dรุBgpu_0/data_0*ะรุB	gpu_0/w_0*ะB	gpu_0/b_0*ุะB	gpu_0/w_1*ุB	gpu_0/b_1*dุBgpu_0/relu_3*ะุB	gpu_0/w_4*ะB	gpu_0/b_4*รุะB	gpu_0/w_5*ะB	gpu_0/b_5Z 
+gpu_0/data_0
+
+
+d
+รุZ
+	gpu_0/w_0
+
+ะ
+รุZ
+	gpu_0/b_0
+	
+ะZ
+	gpu_0/w_1
+
+
+ุ
+ะZ
+	gpu_0/b_1
+	
+ุZ
+gpu_0/relu_3
+	
+d
+ุZ
+	gpu_0/w_4
+
+
+ะ
+ุZ
+	gpu_0/b_4
+	
+ะZ
+	gpu_0/w_5
+
+รุ
+ะZ
+	gpu_0/b_5
+	
+ะB

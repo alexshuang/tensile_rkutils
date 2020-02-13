@@ -1,0 +1,397 @@
+	onnx-mims:©G
+’
+gpu_0/emb_x
+gpu_0/enc_layer1_input_weights
+"gpu_0/enc_layer1_recurrent_weights
+gpu_0/enc_layer1_biasgpu_0/enc_rnn1"Lstm*
+	direction"bidirectional *^
+activationsJsigmoidJsigmoidJsigmoidJtanhJtanhJsigmoidJsigmoidJsigmoidJtanhJtanh *
+hidden_size€ 
+è
+gpu_0/enc_rnn1
+gpu_0/enc_layer2_input_weights
+"gpu_0/enc_layer2_recurrent_weights
+gpu_0/enc_layer2_biasgpu_0/enc_rnn2"Lstm*
+	direction"forward *7
+activationsJsigmoidJsigmoidJsigmoidJtanhJtanh *
+hidden_size€ 
+è
+gpu_0/enc_rnn2
+gpu_0/enc_layer3_input_weights
+"gpu_0/enc_layer3_recurrent_weights
+gpu_0/enc_layer3_biasgpu_0/enc_rnn3"Lstm*
+	direction"forward *7
+activationsJsigmoidJsigmoidJsigmoidJtanhJtanh *
+hidden_size€ 
+5
+gpu_0/enc_rnn2
+gpu_0/enc_rnn3gpu_0/enc_res3"Sum
+è
+gpu_0/enc_res3
+gpu_0/enc_layer4_input_weights
+"gpu_0/enc_layer4_recurrent_weights
+gpu_0/enc_layer4_biasgpu_0/enc_rnn4"Lstm*
+	direction"forward *7
+activationsJsigmoidJsigmoidJsigmoidJtanhJtanh *
+hidden_size€ 
+5
+gpu_0/enc_res3
+gpu_0/enc_rnn4gpu_0/enc_res4"Sum
+è
+gpu_0/enc_res4
+gpu_0/enc_layer5_input_weights
+"gpu_0/enc_layer5_recurrent_weights
+gpu_0/enc_layer5_biasgpu_0/enc_rnn5"Lstm*
+	direction"forward *7
+activationsJsigmoidJsigmoidJsigmoidJtanhJtanh *
+hidden_size€ 
+5
+gpu_0/enc_res4
+gpu_0/enc_rnn5gpu_0/enc_res5"Sum
+è
+gpu_0/enc_res5
+gpu_0/enc_layer6_input_weights
+"gpu_0/enc_layer6_recurrent_weights
+gpu_0/enc_layer6_biasgpu_0/enc_rnn6"Lstm*
+	direction"forward *7
+activationsJsigmoidJsigmoidJsigmoidJtanhJtanh *
+hidden_size€ 
+5
+gpu_0/enc_res5
+gpu_0/enc_rnn6gpu_0/enc_res6"Sum
+è
+gpu_0/enc_res6
+gpu_0/enc_layer7_input_weights
+"gpu_0/enc_layer7_recurrent_weights
+gpu_0/enc_layer7_biasgpu_0/enc_rnn7"Lstm*
+	direction"forward *7
+activationsJsigmoidJsigmoidJsigmoidJtanhJtanh *
+hidden_size€ 
+5
+gpu_0/enc_res6
+gpu_0/enc_rnn7gpu_0/enc_res7"Sum
+è
+gpu_0/enc_res7
+gpu_0/enc_layer8_input_weights
+"gpu_0/enc_layer8_recurrent_weights
+gpu_0/enc_layer8_biasgpu_0/enc_rnn8"Lstm*
+	direction"forward *7
+activationsJsigmoidJsigmoidJsigmoidJtanhJtanh *
+hidden_size€ 
+•
+gpu_0/enc_rnn8
+gpu_0/dec_rnn1gpu_0/attn_1"	Attention*
+type"bahdanau *
+num_hidden_layers *
+activationsJtanh *
+hidden_size@€ 
+æ
+gpu_0/attn_1
+gpu_0/dec_layer1_input_weights
+"gpu_0/dec_layer1_recurrent_weights
+gpu_0/dec_layer1_biasgpu_0/dec_rnn1"Lstm*
+	direction"forward *7
+activationsJsigmoidJsigmoidJsigmoidJtanhJtanh *
+hidden_size€ 
+è
+gpu_0/dec_rnn1
+gpu_0/dec_layer2_input_weights
+"gpu_0/dec_layer2_recurrent_weights
+gpu_0/dec_layer2_biasgpu_0/dec_rnn2"Lstm*
+	direction"forward *7
+activationsJsigmoidJsigmoidJsigmoidJtanhJtanh *
+hidden_size€ 
+è
+gpu_0/dec_rnn2
+gpu_0/dec_layer3_input_weights
+"gpu_0/dec_layer3_recurrent_weights
+gpu_0/dec_layer3_biasgpu_0/dec_rnn3"Lstm*
+	direction"forward *7
+activationsJsigmoidJsigmoidJsigmoidJtanhJtanh *
+hidden_size€ 
+5
+gpu_0/dec_rnn2
+gpu_0/dec_rnn3gpu_0/dec_res3"Sum
+è
+gpu_0/dec_res3
+gpu_0/dec_layer4_input_weights
+"gpu_0/dec_layer4_recurrent_weights
+gpu_0/dec_layer4_biasgpu_0/dec_rnn4"Lstm*
+	direction"forward *7
+activationsJsigmoidJsigmoidJsigmoidJtanhJtanh *
+hidden_size€ 
+5
+gpu_0/dec_res3
+gpu_0/dec_rnn4gpu_0/dec_res4"Sum
+è
+gpu_0/dec_res4
+gpu_0/dec_layer5_input_weights
+"gpu_0/dec_layer5_recurrent_weights
+gpu_0/dec_layer5_biasgpu_0/dec_rnn5"Lstm*
+	direction"forward *7
+activationsJsigmoidJsigmoidJsigmoidJtanhJtanh *
+hidden_size€ 
+5
+gpu_0/dec_res4
+gpu_0/dec_rnn5gpu_0/dec_res5"Sum
+è
+gpu_0/dec_res5
+gpu_0/dec_layer6_input_weights
+"gpu_0/dec_layer6_recurrent_weights
+gpu_0/dec_layer6_biasgpu_0/dec_rnn6"Lstm*
+	direction"forward *7
+activationsJsigmoidJsigmoidJsigmoidJtanhJtanh *
+hidden_size€ 
+5
+gpu_0/dec_res5
+gpu_0/dec_rnn6gpu_0/dec_res6"Sum
+è
+gpu_0/dec_res6
+gpu_0/dec_layer7_input_weights
+"gpu_0/dec_layer7_recurrent_weights
+gpu_0/dec_layer7_biasgpu_0/dec_rnn7"Lstm*
+	direction"forward *7
+activationsJsigmoidJsigmoidJsigmoidJtanhJtanh *
+hidden_size€ 
+5
+gpu_0/dec_res6
+gpu_0/dec_rnn7gpu_0/dec_res7"Sum
+è
+gpu_0/dec_res7
+gpu_0/dec_layer8_input_weights
+"gpu_0/dec_layer8_recurrent_weights
+gpu_0/dec_layer8_biasgpu_0/dec_rnn8"Lstm*
+	direction"forward *7
+activationsJsigmoidJsigmoidJsigmoidJtanhJtanh *
+hidden_size€ 
+*
+gpu_0/dec_rnn8gpu_0/softmax_1"Softmax	googlenmt*2€Bgpu_0/emb_x**€ €Bgpu_0/enc_layer1_input_weights*.€ €B"gpu_0/enc_layer1_recurrent_weights*€Bgpu_0/enc_layer1_bias**€ €Bgpu_0/enc_layer2_input_weights*.€ €B"gpu_0/enc_layer2_recurrent_weights*€Bgpu_0/enc_layer2_bias**€ €Bgpu_0/enc_layer3_input_weights*.€ €B"gpu_0/enc_layer3_recurrent_weights*€Bgpu_0/enc_layer3_bias**€ €Bgpu_0/enc_layer4_input_weights*.€ €B"gpu_0/enc_layer4_recurrent_weights*€Bgpu_0/enc_layer4_bias**€ €Bgpu_0/enc_layer5_input_weights*.€ €B"gpu_0/enc_layer5_recurrent_weights*€Bgpu_0/enc_layer5_bias**€ €Bgpu_0/enc_layer6_input_weights*.€ €B"gpu_0/enc_layer6_recurrent_weights*€Bgpu_0/enc_layer6_bias**€ €Bgpu_0/enc_layer7_input_weights*.€ €B"gpu_0/enc_layer7_recurrent_weights*€Bgpu_0/enc_layer7_bias**€ €Bgpu_0/enc_layer8_input_weights*.€ €B"gpu_0/enc_layer8_recurrent_weights*€Bgpu_0/enc_layer8_bias**€ €Bgpu_0/dec_layer1_input_weights*.€ €B"gpu_0/dec_layer1_recurrent_weights*€Bgpu_0/dec_layer1_bias**€ €Bgpu_0/dec_layer2_input_weights*.€ €B"gpu_0/dec_layer2_recurrent_weights*€Bgpu_0/dec_layer2_bias**€ €Bgpu_0/dec_layer3_input_weights*.€ €B"gpu_0/dec_layer3_recurrent_weights*€Bgpu_0/dec_layer3_bias**€ €Bgpu_0/dec_layer4_input_weights*.€ €B"gpu_0/dec_layer4_recurrent_weights*€Bgpu_0/dec_layer4_bias**€ €Bgpu_0/dec_layer5_input_weights*.€ €B"gpu_0/dec_layer5_recurrent_weights*€Bgpu_0/dec_layer5_bias**€ €Bgpu_0/dec_layer6_input_weights*.€ €B"gpu_0/dec_layer6_recurrent_weights*€Bgpu_0/dec_layer6_bias**€ €Bgpu_0/dec_layer7_input_weights*.€ €B"gpu_0/dec_layer7_recurrent_weights*€Bgpu_0/dec_layer7_bias**€ €Bgpu_0/dec_layer8_input_weights*.€ €B"gpu_0/dec_layer8_recurrent_weights*€Bgpu_0/dec_layer8_biasZ"
+gpu_0/emb_x
+
+2
+
+€Z6
+gpu_0/enc_layer1_input_weights
+
+
+€ 
+€Z:
+"gpu_0/enc_layer1_recurrent_weights
+
+
+€ 
+€Z(
+gpu_0/enc_layer1_bias
+	
+
+€Z6
+gpu_0/enc_layer2_input_weights
+
+
+€ 
+€Z:
+"gpu_0/enc_layer2_recurrent_weights
+
+
+€ 
+€Z(
+gpu_0/enc_layer2_bias
+	
+
+€Z6
+gpu_0/enc_layer3_input_weights
+
+
+€ 
+€Z:
+"gpu_0/enc_layer3_recurrent_weights
+
+
+€ 
+€Z(
+gpu_0/enc_layer3_bias
+	
+
+€Z6
+gpu_0/enc_layer4_input_weights
+
+
+€ 
+€Z:
+"gpu_0/enc_layer4_recurrent_weights
+
+
+€ 
+€Z(
+gpu_0/enc_layer4_bias
+	
+
+€Z6
+gpu_0/enc_layer5_input_weights
+
+
+€ 
+€Z:
+"gpu_0/enc_layer5_recurrent_weights
+
+
+€ 
+€Z(
+gpu_0/enc_layer5_bias
+	
+
+€Z6
+gpu_0/enc_layer6_input_weights
+
+
+€ 
+€Z:
+"gpu_0/enc_layer6_recurrent_weights
+
+
+€ 
+€Z(
+gpu_0/enc_layer6_bias
+	
+
+€Z6
+gpu_0/enc_layer7_input_weights
+
+
+€ 
+€Z:
+"gpu_0/enc_layer7_recurrent_weights
+
+
+€ 
+€Z(
+gpu_0/enc_layer7_bias
+	
+
+€Z6
+gpu_0/enc_layer8_input_weights
+
+
+€ 
+€Z:
+"gpu_0/enc_layer8_recurrent_weights
+
+
+€ 
+€Z(
+gpu_0/enc_layer8_bias
+	
+
+€Z6
+gpu_0/dec_layer1_input_weights
+
+
+€ 
+€Z:
+"gpu_0/dec_layer1_recurrent_weights
+
+
+€ 
+€Z(
+gpu_0/dec_layer1_bias
+	
+
+€Z6
+gpu_0/dec_layer2_input_weights
+
+
+€ 
+€Z:
+"gpu_0/dec_layer2_recurrent_weights
+
+
+€ 
+€Z(
+gpu_0/dec_layer2_bias
+	
+
+€Z6
+gpu_0/dec_layer3_input_weights
+
+
+€ 
+€Z:
+"gpu_0/dec_layer3_recurrent_weights
+
+
+€ 
+€Z(
+gpu_0/dec_layer3_bias
+	
+
+€Z6
+gpu_0/dec_layer4_input_weights
+
+
+€ 
+€Z:
+"gpu_0/dec_layer4_recurrent_weights
+
+
+€ 
+€Z(
+gpu_0/dec_layer4_bias
+	
+
+€Z6
+gpu_0/dec_layer5_input_weights
+
+
+€ 
+€Z:
+"gpu_0/dec_layer5_recurrent_weights
+
+
+€ 
+€Z(
+gpu_0/dec_layer5_bias
+	
+
+€Z6
+gpu_0/dec_layer6_input_weights
+
+
+€ 
+€Z:
+"gpu_0/dec_layer6_recurrent_weights
+
+
+€ 
+€Z(
+gpu_0/dec_layer6_bias
+	
+
+€Z6
+gpu_0/dec_layer7_input_weights
+
+
+€ 
+€Z:
+"gpu_0/dec_layer7_recurrent_weights
+
+
+€ 
+€Z(
+gpu_0/dec_layer7_bias
+	
+
+€Z6
+gpu_0/dec_layer8_input_weights
+
+
+€ 
+€Z:
+"gpu_0/dec_layer8_recurrent_weights
+
+
+€ 
+€Z(
+gpu_0/dec_layer8_bias
+	
+
+€B

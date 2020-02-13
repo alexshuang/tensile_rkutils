@@ -1,0 +1,19 @@
+	onnx-mims:ý
+X
+gpu_0/data_0
+	gpu_0/w_0
+	gpu_0/b_0gpu_0/out_0"Gemm*
+	broadcast *
+transB 	gemm_test*€ Bgpu_0/data_0*€ € B	gpu_0/w_0*€B	gpu_0/b_0Z
+gpu_0/data_0
+	
+
+€ Z
+	gpu_0/w_0
+
+
+€ 
+€ Z
+	gpu_0/b_0
+	
+€B

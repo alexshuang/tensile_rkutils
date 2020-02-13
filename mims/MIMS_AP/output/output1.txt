@@ -1,0 +1,689 @@
+MIOpenDriver: conv -n 64 -c 3 -H 230 -W 230 -k 64 -y 7 -x 7 -p 0 -q 0 -u 2 -v 2 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 3.251464 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv7x7u2, 64, 3, 112, 112, 7, 7, 64,  15105785856, 40664832, 205520896, 4646, 76, 3.251464
+MIOpen Backward Data Conv. Algorithm: 1
+GPU Kernel Time Backward Data Conv. Elapsed: 6.741381 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv7x7u2, 64, 3, 7, 7, 64, 112, 112,  63703449600, 86784, 205520896, 9450, 30, 6.741381
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 5.793933 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv7x7u2, 64, 3, 112, 112, 7, 7, 64,  63703449600, 0, 0, 10995, 0, 5.793933
+MIOpenDriver: conv -n 64 -c 64 -H 56 -W 56 -k 64 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 0.260249 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 64, 56, 56, 1, 1, 64,  1644167168, 51396608, 51380224, 6318, 395, 0.260249
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.253956 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 64, 1, 1, 64, 56, 56,  1644167168, 1064960, 51380224, 6474, 207, 0.253956
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.662987 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 64, 56, 56, 1, 1, 64,  1644167168, 0, 0, 2480, 0, 0.662987
+MIOpenDriver: conv -n 64 -c 64 -H 56 -W 56 -k 64 -y 3 -x 3 -p 1 -q 1 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 1.026773 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv3x3u1, 64, 64, 56, 56, 3, 3, 64,  14797504512, 51527680, 51380224, 14412, 100, 1.026773
+MIOpen Backward Data Conv. Algorithm: 3
+GPU Kernel Time Backward Data Conv. Elapsed: 1.026080 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv3x3u1, 64, 64, 3, 3, 64, 56, 56,  14797504512, 1196032, 51380224, 14421, 51, 1.026080
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 2.192496 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv3x3u1, 64, 64, 56, 56, 3, 3, 64,  14797504512, 0, 0, 6749, 0, 2.192496
+MIOpenDriver: conv -n 64 -c 64 -H 56 -W 56 -k 256 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 0.917138 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 64, 56, 56, 1, 1, 256,  6576668672, 51445760, 205520896, 7171, 280, 0.917138
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.850098 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 64, 1, 1, 256, 56, 56,  6576668672, 4259840, 205520896, 7736, 247, 0.850098
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.508461 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 64, 56, 56, 1, 1, 256,  6576668672, 0, 0, 4360, 0, 1.508461
+MIOpenDriver: conv -n 64 -c 64 -H 56 -W 56 -k 256 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 0.920177 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 64, 56, 56, 1, 1, 256,  6576668672, 51445760, 205520896, 7147, 279, 0.920177
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.849084 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 64, 1, 1, 256, 56, 56,  6576668672, 4259840, 205520896, 7746, 247, 0.849084
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.518595 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 64, 56, 56, 1, 1, 256,  6576668672, 0, 0, 4331, 0, 1.518595
+MIOpenDriver: conv -n 64 -c 256 -H 56 -W 56 -k 64 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 0.945991 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 256, 56, 56, 1, 1, 64,  6576668672, 205586432, 51380224, 6952, 272, 0.945991
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.887323 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 256, 1, 1, 64, 56, 56,  6576668672, 4259840, 51380224, 7412, 63, 0.887323
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.520052 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 256, 56, 56, 1, 1, 64,  6576668672, 0, 0, 4327, 0, 1.520052
+MIOpenDriver: conv -n 64 -c 64 -H 56 -W 56 -k 64 -y 3 -x 3 -p 1 -q 1 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 1.027182 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv3x3u1, 64, 64, 56, 56, 3, 3, 64,  14797504512, 51527680, 51380224, 14406, 100, 1.027182
+MIOpen Backward Data Conv. Algorithm: 3
+GPU Kernel Time Backward Data Conv. Elapsed: 1.027076 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv3x3u1, 64, 64, 3, 3, 64, 56, 56,  14797504512, 1196032, 51380224, 14407, 51, 1.027076
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 2.192924 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv3x3u1, 64, 64, 56, 56, 3, 3, 64,  14797504512, 0, 0, 6748, 0, 2.192924
+MIOpenDriver: conv -n 64 -c 64 -H 56 -W 56 -k 256 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 0.917670 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 64, 56, 56, 1, 1, 256,  6576668672, 51445760, 205520896, 7167, 280, 0.917670
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.844515 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 64, 1, 1, 256, 56, 56,  6576668672, 4259840, 205520896, 7788, 248, 0.844515
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.515875 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 64, 56, 56, 1, 1, 256,  6576668672, 0, 0, 4339, 0, 1.515875
+MIOpenDriver: conv -n 64 -c 256 -H 56 -W 56 -k 64 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 0.945458 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 256, 56, 56, 1, 1, 64,  6576668672, 205586432, 51380224, 6956, 272, 0.945458
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.884390 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 256, 1, 1, 64, 56, 56,  6576668672, 4259840, 51380224, 7436, 63, 0.884390
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.520462 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 256, 56, 56, 1, 1, 64,  6576668672, 0, 0, 4325, 0, 1.520462
+MIOpenDriver: conv -n 64 -c 64 -H 56 -W 56 -k 64 -y 3 -x 3 -p 1 -q 1 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 1.027361 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv3x3u1, 64, 64, 56, 56, 3, 3, 64,  14797504512, 51527680, 51380224, 14403, 100, 1.027361
+MIOpen Backward Data Conv. Algorithm: 3
+GPU Kernel Time Backward Data Conv. Elapsed: 1.027289 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv3x3u1, 64, 64, 3, 3, 64, 56, 56,  14797504512, 1196032, 51380224, 14404, 51, 1.027289
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 2.193334 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv3x3u1, 64, 64, 56, 56, 3, 3, 64,  14797504512, 0, 0, 6747, 0, 2.193334
+MIOpenDriver: conv -n 64 -c 64 -H 56 -W 56 -k 256 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 0.918275 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 64, 56, 56, 1, 1, 256,  6576668672, 51445760, 205520896, 7162, 280, 0.918275
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.847483 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 64, 1, 1, 256, 56, 56,  6576668672, 4259840, 205520896, 7760, 248, 0.847483
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.510399 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 64, 56, 56, 1, 1, 256,  6576668672, 0, 0, 4354, 0, 1.510399
+MIOpenDriver: conv -n 64 -c 256 -H 56 -W 56 -k 128 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 1.696424 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 256, 56, 56, 1, 1, 128,  13153337344, 205651968, 102760448, 7754, 182, 1.696424
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 1.693296 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 256, 1, 1, 128, 56, 56,  13153337344, 8519680, 102760448, 7768, 66, 1.693296
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 2.341527 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 256, 56, 56, 1, 1, 128,  13153337344, 0, 0, 5617, 0, 2.341527
+MIOpenDriver: conv -n 64 -c 128 -H 58 -W 58 -k 128 -y 3 -x 3 -p 0 -q 0 -u 2 -v 2 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 3.845880 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv3x3u2, 64, 128, 28, 28, 3, 3, 128,  14797504512, 110821376, 25690112, 3848, 35, 3.845880
+MIOpen Backward Data Conv. Algorithm: 3
+GPU Kernel Time Backward Data Conv. Elapsed: 4.579017 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv3x3u2, 64, 128, 3, 3, 128, 28, 28,  63493373952, 4784128, 25690112, 13866, 7, 4.579017
+MIOpen Backward Weights Conv. Algorithm: 0
+GPU Kernel Time Backward Weights Conv. Elapsed: 5.780462 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv3x3u2, 64, 128, 28, 28, 3, 3, 128,  63493373952, 0, 0, 10984, 0, 5.780462
+MIOpenDriver: conv -n 64 -c 128 -H 28 -W 28 -k 512 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 0.913047 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 128, 28, 28, 1, 1, 512,  6576668672, 25952256, 102760448, 7203, 141, 0.913047
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.905581 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 128, 1, 1, 512, 28, 28,  6576668672, 17039360, 102760448, 7262, 132, 0.905581
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.938346 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 128, 28, 28, 1, 1, 512,  6576668672, 0, 0, 7009, 0, 0.938346
+MIOpenDriver: conv -n 64 -c 256 -H 56 -W 56 -k 512 -y 1 -x 1 -p 0 -q 0 -u 2 -v 2 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 2.222060 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u2, 64, 256, 28, 28, 1, 1, 512,  13153337344, 206045184, 102760448, 5919, 139, 2.222060
+MIOpen Backward Data Conv. Algorithm: 1
+GPU Kernel Time Backward Data Conv. Elapsed: 2.626931 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u2, 64, 256, 1, 1, 512, 28, 28,  52613349376, 34078720, 102760448, 20028, 52, 2.626931
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 2.082860 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u2, 64, 256, 28, 28, 1, 1, 512,  52613349376, 0, 0, 25260, 0, 2.082860
+MIOpenDriver: conv -n 64 -c 512 -H 28 -W 28 -k 128 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 1.078684 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 512, 28, 28, 1, 1, 128,  6576668672, 103022592, 25690112, 6097, 119, 1.078684
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.899146 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 512, 1, 1, 128, 28, 28,  6576668672, 17039360, 25690112, 7314, 48, 0.899146
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.926630 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 512, 28, 28, 1, 1, 128,  6576668672, 0, 0, 7097, 0, 0.926630
+MIOpenDriver: conv -n 64 -c 128 -H 28 -W 28 -k 128 -y 3 -x 3 -p 1 -q 1 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 0.966468 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv3x3u1, 64, 128, 28, 28, 3, 3, 128,  14797504512, 26279936, 25690112, 15311, 54, 0.966468
+MIOpen Backward Data Conv. Algorithm: 3
+GPU Kernel Time Backward Data Conv. Elapsed: 0.961970 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv3x3u1, 64, 128, 3, 3, 128, 28, 28,  14797504512, 4784128, 25690112, 15382, 32, 0.961970
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 2.088227 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv3x3u1, 64, 128, 28, 28, 3, 3, 128,  14797504512, 0, 0, 7086, 0, 2.088227
+MIOpenDriver: conv -n 64 -c 128 -H 28 -W 28 -k 512 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 0.906967 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 128, 28, 28, 1, 1, 512,  6576668672, 25952256, 102760448, 7251, 142, 0.906967
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.899056 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 128, 1, 1, 512, 28, 28,  6576668672, 17039360, 102760448, 7315, 133, 0.899056
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.938790 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 128, 28, 28, 1, 1, 512,  6576668672, 0, 0, 7005, 0, 0.938790
+MIOpenDriver: conv -n 64 -c 512 -H 28 -W 28 -k 128 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 1.075661 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 512, 28, 28, 1, 1, 128,  6576668672, 103022592, 25690112, 6114, 120, 1.075661
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.898701 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 512, 1, 1, 128, 28, 28,  6576668672, 17039360, 25690112, 7318, 48, 0.898701
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.926524 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 512, 28, 28, 1, 1, 128,  6576668672, 0, 0, 7098, 0, 0.926524
+MIOpenDriver: conv -n 64 -c 128 -H 28 -W 28 -k 128 -y 3 -x 3 -p 1 -q 1 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 0.966045 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv3x3u1, 64, 128, 28, 28, 3, 3, 128,  14797504512, 26279936, 25690112, 15318, 54, 0.966045
+MIOpen Backward Data Conv. Algorithm: 3
+GPU Kernel Time Backward Data Conv. Elapsed: 0.962880 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv3x3u1, 64, 128, 3, 3, 128, 28, 28,  14797504512, 4784128, 25690112, 15368, 32, 0.962880
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 2.086168 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv3x3u1, 64, 128, 28, 28, 3, 3, 128,  14797504512, 0, 0, 7093, 0, 2.086168
+MIOpenDriver: conv -n 64 -c 128 -H 28 -W 28 -k 512 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 0.906309 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 128, 28, 28, 1, 1, 512,  6576668672, 25952256, 102760448, 7257, 142, 0.906309
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.899945 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 128, 1, 1, 512, 28, 28,  6576668672, 17039360, 102760448, 7308, 133, 0.899945
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.938613 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 128, 28, 28, 1, 1, 512,  6576668672, 0, 0, 7007, 0, 0.938613
+MIOpenDriver: conv -n 64 -c 512 -H 28 -W 28 -k 128 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 0.977706 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 512, 28, 28, 1, 1, 128,  6576668672, 103022592, 25690112, 6727, 132, 0.977706
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.898825 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 512, 1, 1, 128, 28, 28,  6576668672, 17039360, 25690112, 7317, 48, 0.898825
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.927003 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 512, 28, 28, 1, 1, 128,  6576668672, 0, 0, 7095, 0, 0.927003
+MIOpenDriver: conv -n 64 -c 128 -H 28 -W 28 -k 128 -y 3 -x 3 -p 1 -q 1 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 0.966770 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv3x3u1, 64, 128, 28, 28, 3, 3, 128,  14797504512, 26279936, 25690112, 15306, 54, 0.966770
+MIOpen Backward Data Conv. Algorithm: 3
+GPU Kernel Time Backward Data Conv. Elapsed: 0.963393 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv3x3u1, 64, 128, 3, 3, 128, 28, 28,  14797504512, 4784128, 25690112, 15360, 32, 0.963393
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 2.087410 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv3x3u1, 64, 128, 28, 28, 3, 3, 128,  14797504512, 0, 0, 7089, 0, 2.087410
+MIOpenDriver: conv -n 64 -c 128 -H 28 -W 28 -k 512 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 0.908958 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 128, 28, 28, 1, 1, 512,  6576668672, 25952256, 102760448, 7235, 142, 0.908958
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.901581 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 128, 1, 1, 512, 28, 28,  6576668672, 17039360, 102760448, 7295, 133, 0.901581
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.938737 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 128, 28, 28, 1, 1, 512,  6576668672, 0, 0, 7006, 0, 0.938737
+MIOpenDriver: conv -n 64 -c 512 -H 28 -W 28 -k 256 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 1.908974 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 512, 28, 28, 1, 1, 256,  13153337344, 103284736, 51380224, 6890, 81, 1.908974
+MIOpen Backward Data Conv. Algorithm: 1
+GPU Kernel Time Backward Data Conv. Elapsed: 1.668460 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 512, 1, 1, 256, 28, 28,  13153337344, 34078720, 51380224, 7884, 51, 1.668460
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.810967 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 512, 28, 28, 1, 1, 256,  13153337344, 0, 0, 7263, 0, 1.810967
+MIOpenDriver: conv -n 64 -c 256 -H 30 -W 30 -k 256 -y 3 -x 3 -p 0 -q 0 -u 2 -v 2 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 3.975177 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv3x3u2, 64, 256, 14, 14, 3, 3, 256,  14797504512, 61341696, 12845056, 3722, 19, 3.975177
+MIOpen Backward Data Conv. Algorithm: 3
+GPU Kernel Time Backward Data Conv. Elapsed: 4.938411 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv3x3u2, 64, 256, 3, 3, 256, 14, 14,  67947724800, 19136512, 12845056, 13759, 6, 4.938411
+MIOpen Backward Weights Conv. Algorithm: 0
+GPU Kernel Time Backward Weights Conv. Elapsed: 5.108498 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv3x3u2, 64, 256, 14, 14, 3, 3, 256,  67947724800, 0, 0, 13301, 0, 5.108498
+MIOpenDriver: conv -n 64 -c 256 -H 14 -W 14 -k 1024 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 1.453722 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 256, 14, 14, 1, 1, 1024,  6576668672, 13893632, 51380224, 4524, 45, 1.453722
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 1.013100 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 256, 1, 1, 1024, 14, 14,  6576668672, 68157440, 51380224, 6492, 118, 1.013100
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.945368 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 256, 14, 14, 1, 1, 1024,  6576668672, 0, 0, 6957, 0, 0.945368
+MIOpenDriver: conv -n 64 -c 512 -H 28 -W 28 -k 1024 -y 1 -x 1 -p 0 -q 0 -u 2 -v 2 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 2.092815 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u2, 64, 512, 14, 14, 1, 1, 1024,  13153337344, 104857600, 51380224, 6285, 75, 2.092815
+MIOpen Backward Data Conv. Algorithm: 1
+GPU Kernel Time Backward Data Conv. Elapsed: 2.106415 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u2, 64, 512, 1, 1, 1024, 14, 14,  52613349376, 136314880, 51380224, 24978, 89, 2.106415
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 2.022877 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u2, 64, 512, 14, 14, 1, 1, 1024,  52613349376, 0, 0, 26009, 0, 2.022877
+MIOpenDriver: conv -n 64 -c 1024 -H 14 -W 14 -k 256 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 1.210790 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 1024, 14, 14, 1, 1, 256,  6576668672, 52428800, 12845056, 5432, 54, 1.210790
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.996176 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 1024, 1, 1, 256, 14, 14,  6576668672, 68157440, 12845056, 6602, 81, 0.996176
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.952390 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 1024, 14, 14, 1, 1, 256,  6576668672, 0, 0, 6905, 0, 0.952390
+MIOpenDriver: conv -n 64 -c 256 -H 14 -W 14 -k 256 -y 3 -x 3 -p 1 -q 1 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 0.968194 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv3x3u1, 64, 256, 14, 14, 3, 3, 256,  14797504512, 15204352, 12845056, 15284, 29, 0.968194
+MIOpen Backward Data Conv. Algorithm: 3
+GPU Kernel Time Backward Data Conv. Elapsed: 0.963752 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv3x3u1, 64, 256, 3, 3, 256, 14, 14,  14797504512, 19136512, 12845056, 15354, 33, 0.963752
+MIOpen Backward Weights Conv. Algorithm: 3
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.421136 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv3x3u1, 64, 256, 14, 14, 3, 3, 256,  14797504512, 0, 0, 10412, 0, 1.421136
+MIOpenDriver: conv -n 64 -c 256 -H 14 -W 14 -k 1024 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 1.212479 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 256, 14, 14, 1, 1, 1024,  6576668672, 13893632, 51380224, 5424, 54, 1.212479
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 1.010487 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 256, 1, 1, 1024, 14, 14,  6576668672, 68157440, 51380224, 6508, 118, 1.010487
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.945048 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 256, 14, 14, 1, 1, 1024,  6576668672, 0, 0, 6959, 0, 0.945048
+MIOpenDriver: conv -n 64 -c 1024 -H 14 -W 14 -k 256 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 1.209456 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 1024, 14, 14, 1, 1, 256,  6576668672, 52428800, 12845056, 5438, 54, 1.209456
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.990274 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 1024, 1, 1, 256, 14, 14,  6576668672, 68157440, 12845056, 6641, 82, 0.990274
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.951963 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 1024, 14, 14, 1, 1, 256,  6576668672, 0, 0, 6909, 0, 0.951963
+MIOpenDriver: conv -n 64 -c 256 -H 14 -W 14 -k 256 -y 3 -x 3 -p 1 -q 1 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 0.968426 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv3x3u1, 64, 256, 14, 14, 3, 3, 256,  14797504512, 15204352, 12845056, 15280, 29, 0.968426
+MIOpen Backward Data Conv. Algorithm: 3
+GPU Kernel Time Backward Data Conv. Elapsed: 0.963858 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv3x3u1, 64, 256, 3, 3, 256, 14, 14,  14797504512, 19136512, 12845056, 15352, 33, 0.963858
+MIOpen Backward Weights Conv. Algorithm: 3
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.424479 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv3x3u1, 64, 256, 14, 14, 3, 3, 256,  14797504512, 0, 0, 10388, 0, 1.424479
+MIOpenDriver: conv -n 64 -c 256 -H 14 -W 14 -k 1024 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 1.447677 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 256, 14, 14, 1, 1, 1024,  6576668672, 13893632, 51380224, 4543, 45, 1.447677
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 1.009686 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 256, 1, 1, 1024, 14, 14,  6576668672, 68157440, 51380224, 6514, 118, 1.009686
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.959501 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 256, 14, 14, 1, 1, 1024,  6576668672, 0, 0, 6854, 0, 0.959501
+MIOpenDriver: conv -n 64 -c 1024 -H 14 -W 14 -k 256 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 1.210541 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 1024, 14, 14, 1, 1, 256,  6576668672, 52428800, 12845056, 5433, 54, 1.210541
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.993277 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 1024, 1, 1, 256, 14, 14,  6576668672, 68157440, 12845056, 6621, 82, 0.993277
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.954470 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 1024, 14, 14, 1, 1, 256,  6576668672, 0, 0, 6890, 0, 0.954470
+MIOpenDriver: conv -n 64 -c 256 -H 14 -W 14 -k 256 -y 3 -x 3 -p 1 -q 1 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 0.968565 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv3x3u1, 64, 256, 14, 14, 3, 3, 256,  14797504512, 15204352, 12845056, 15278, 29, 0.968565
+MIOpen Backward Data Conv. Algorithm: 3
+GPU Kernel Time Backward Data Conv. Elapsed: 0.963996 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv3x3u1, 64, 256, 3, 3, 256, 14, 14,  14797504512, 19136512, 12845056, 15350, 33, 0.963996
+MIOpen Backward Weights Conv. Algorithm: 3
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.449436 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv3x3u1, 64, 256, 14, 14, 3, 3, 256,  14797504512, 0, 0, 10209, 0, 1.449436
+MIOpenDriver: conv -n 64 -c 256 -H 14 -W 14 -k 1024 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 1.406434 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 256, 14, 14, 1, 1, 1024,  6576668672, 13893632, 51380224, 4676, 46, 1.406434
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 1.008727 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 256, 1, 1, 1024, 14, 14,  6576668672, 68157440, 51380224, 6520, 119, 1.008727
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.959021 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 256, 14, 14, 1, 1, 1024,  6576668672, 0, 0, 6858, 0, 0.959021
+MIOpenDriver: conv -n 64 -c 1024 -H 14 -W 14 -k 256 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 1.209350 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 1024, 14, 14, 1, 1, 256,  6576668672, 52428800, 12845056, 5438, 54, 1.209350
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.992639 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 1024, 1, 1, 256, 14, 14,  6576668672, 68157440, 12845056, 6625, 82, 0.992639
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.952852 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 1024, 14, 14, 1, 1, 256,  6576668672, 0, 0, 6902, 0, 0.952852
+MIOpenDriver: conv -n 64 -c 256 -H 14 -W 14 -k 256 -y 3 -x 3 -p 1 -q 1 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 0.968266 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv3x3u1, 64, 256, 14, 14, 3, 3, 256,  14797504512, 15204352, 12845056, 15282, 29, 0.968266
+MIOpen Backward Data Conv. Algorithm: 3
+GPU Kernel Time Backward Data Conv. Elapsed: 0.964214 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv3x3u1, 64, 256, 3, 3, 256, 14, 14,  14797504512, 19136512, 12845056, 15347, 33, 0.964214
+MIOpen Backward Weights Conv. Algorithm: 3
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.408000 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv3x3u1, 64, 256, 14, 14, 3, 3, 256,  14797504512, 0, 0, 10510, 0, 1.408000
+MIOpenDriver: conv -n 64 -c 256 -H 14 -W 14 -k 1024 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 1.455075 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 256, 14, 14, 1, 1, 1024,  6576668672, 13893632, 51380224, 4520, 45, 1.455075
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 1.009634 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 256, 1, 1, 1024, 14, 14,  6576668672, 68157440, 51380224, 6514, 118, 1.009634
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.959288 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 256, 14, 14, 1, 1, 1024,  6576668672, 0, 0, 6856, 0, 0.959288
+MIOpenDriver: conv -n 64 -c 1024 -H 14 -W 14 -k 256 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 1.211962 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 1024, 14, 14, 1, 1, 256,  6576668672, 52428800, 12845056, 5426, 54, 1.211962
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 0.993758 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 1024, 1, 1, 256, 14, 14,  6576668672, 68157440, 12845056, 6618, 82, 0.993758
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.951892 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 1024, 14, 14, 1, 1, 256,  6576668672, 0, 0, 6909, 0, 0.951892
+MIOpenDriver: conv -n 64 -c 256 -H 14 -W 14 -k 256 -y 3 -x 3 -p 1 -q 1 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 0.972764 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv3x3u1, 64, 256, 14, 14, 3, 3, 256,  14797504512, 15204352, 12845056, 15212, 29, 0.972764
+MIOpen Backward Data Conv. Algorithm: 3
+GPU Kernel Time Backward Data Conv. Elapsed: 0.962363 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv3x3u1, 64, 256, 3, 3, 256, 14, 14,  14797504512, 19136512, 12845056, 15376, 33, 0.962363
+MIOpen Backward Weights Conv. Algorithm: 3
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.395270 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv3x3u1, 64, 256, 14, 14, 3, 3, 256,  14797504512, 0, 0, 10605, 0, 1.395270
+MIOpenDriver: conv -n 64 -c 256 -H 14 -W 14 -k 1024 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 1.449351 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 256, 14, 14, 1, 1, 1024,  6576668672, 13893632, 51380224, 4538, 45, 1.449351
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 1.010167 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 256, 1, 1, 1024, 14, 14,  6576668672, 68157440, 51380224, 6510, 118, 1.010167
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 0.965386 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 256, 14, 14, 1, 1, 1024,  6576668672, 0, 0, 6812, 0, 0.965386
+MIOpenDriver: conv -n 64 -c 1024 -H 14 -W 14 -k 512 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 2.401919 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 1024, 14, 14, 1, 1, 512,  13153337344, 53477376, 25690112, 5476, 33, 2.401919
+MIOpen Backward Data Conv. Algorithm: 1
+GPU Kernel Time Backward Data Conv. Elapsed: 1.775287 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 1024, 1, 1, 512, 14, 14,  13153337344, 136314880, 25690112, 7409, 91, 1.775287
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.866646 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 1024, 14, 14, 1, 1, 512,  13153337344, 0, 0, 7047, 0, 1.866646
+MIOpenDriver: conv -n 64 -c 512 -H 16 -W 16 -k 512 -y 3 -x 3 -p 0 -q 0 -u 2 -v 2 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 4.855884 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv3x3u2, 64, 512, 7, 7, 3, 3, 512,  14797504512, 42991616, 6422528, 3047, 10, 4.855884
+MIOpen Backward Data Conv. Algorithm: 3
+GPU Kernel Time Backward Data Conv. Elapsed: 6.026264 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv3x3u2, 64, 512, 3, 3, 512, 7, 7,  77309411328, 76546048, 6422528, 12829, 14, 6.026264
+MIOpen Backward Weights Conv. Algorithm: 0
+GPU Kernel Time Backward Weights Conv. Elapsed: 5.425138 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv3x3u2, 64, 512, 7, 7, 3, 3, 512,  77309411328, 0, 0, 14250, 0, 5.425138
+MIOpenDriver: conv -n 64 -c 512 -H 7 -W 7 -k 2048 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 1.059199 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 512, 7, 7, 1, 1, 2048,  6576668672, 10616832, 25690112, 6209, 34, 1.059199
+MIOpen Backward Data Conv. Algorithm: 1
+GPU Kernel Time Backward Data Conv. Elapsed: 1.066986 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 512, 1, 1, 2048, 7, 7,  6576668672, 272629760, 25690112, 6164, 280, 1.066986
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.070736 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 512, 7, 7, 1, 1, 2048,  6576668672, 0, 0, 6142, 0, 1.070736
+MIOpenDriver: conv -n 64 -c 1024 -H 14 -W 14 -k 2048 -y 1 -x 1 -p 0 -q 0 -u 2 -v 2 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 2.056210 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u2, 64, 1024, 7, 7, 1, 1, 2048,  13153337344, 59768832, 25690112, 6397, 42, 2.056210
+MIOpen Backward Data Conv. Algorithm: 1
+GPU Kernel Time Backward Data Conv. Elapsed: 2.173775 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u2, 64, 1024, 1, 1, 2048, 7, 7,  52613349376, 545259520, 25690112, 24204, 263, 2.173775
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 2.315410 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u2, 64, 1024, 7, 7, 1, 1, 2048,  52613349376, 0, 0, 22723, 0, 2.315410
+MIOpenDriver: conv -n 64 -c 2048 -H 7 -W 7 -k 512 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 1.431590 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 2048, 7, 7, 1, 1, 512,  6576668672, 29884416, 6422528, 4594, 25, 1.431590
+MIOpen Backward Data Conv. Algorithm: 1
+GPU Kernel Time Backward Data Conv. Elapsed: 1.032017 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 2048, 1, 1, 512, 7, 7,  6576668672, 272629760, 6422528, 6373, 270, 1.032017
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.122950 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 2048, 7, 7, 1, 1, 512,  6576668672, 0, 0, 5857, 0, 1.122950
+MIOpenDriver: conv -n 64 -c 512 -H 7 -W 7 -k 512 -y 3 -x 3 -p 1 -q 1 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 1.173935 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv3x3u1, 64, 512, 7, 7, 3, 3, 512,  14797504512, 15859712, 6422528, 12605, 19, 1.173935
+MIOpen Backward Data Conv. Algorithm: 3
+GPU Kernel Time Backward Data Conv. Elapsed: 1.163322 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv3x3u1, 64, 512, 3, 3, 512, 7, 7,  14797504512, 76546048, 6422528, 12720, 71, 1.163322
+MIOpen Backward Weights Conv. Algorithm: 3
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.265046 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv3x3u1, 64, 512, 7, 7, 3, 3, 512,  14797504512, 0, 0, 11697, 0, 1.265046
+MIOpenDriver: conv -n 64 -c 512 -H 7 -W 7 -k 2048 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 1.053901 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 512, 7, 7, 1, 1, 2048,  6576668672, 10616832, 25690112, 6240, 34, 1.053901
+MIOpen Backward Data Conv. Algorithm: 0
+GPU Kernel Time Backward Data Conv. Elapsed: 1.142717 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 512, 1, 1, 2048, 7, 7,  6576668672, 272629760, 25690112, 5755, 261, 1.142717
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.070968 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 512, 7, 7, 1, 1, 2048,  6576668672, 0, 0, 6141, 0, 1.070968
+MIOpenDriver: conv -n 64 -c 2048 -H 7 -W 7 -k 512 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 1
+GPU Kernel Time Forward Conv. Elapsed: 1.397723 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 2048, 7, 7, 1, 1, 512,  6576668672, 29884416, 6422528, 4705, 26, 1.397723
+MIOpen Backward Data Conv. Algorithm: 1
+GPU Kernel Time Backward Data Conv. Elapsed: 1.033812 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 2048, 1, 1, 512, 7, 7,  6576668672, 272629760, 6422528, 6362, 270, 1.033812
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.134097 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 2048, 7, 7, 1, 1, 512,  6576668672, 0, 0, 5799, 0, 1.134097
+MIOpenDriver: conv -n 64 -c 512 -H 7 -W 7 -k 512 -y 3 -x 3 -p 1 -q 1 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 3
+GPU Kernel Time Forward Conv. Elapsed: 1.177563 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv3x3u1, 64, 512, 7, 7, 3, 3, 512,  14797504512, 15859712, 6422528, 12566, 19, 1.177563
+MIOpen Backward Data Conv. Algorithm: 3
+GPU Kernel Time Backward Data Conv. Elapsed: 1.166594 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv3x3u1, 64, 512, 3, 3, 512, 7, 7,  14797504512, 76546048, 6422528, 12684, 71, 1.166594
+MIOpen Backward Weights Conv. Algorithm: 3
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.259768 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv3x3u1, 64, 512, 7, 7, 3, 3, 512,  14797504512, 0, 0, 11746, 0, 1.259768
+MIOpenDriver: conv -n 64 -c 512 -H 7 -W 7 -k 2048 -y 1 -x 1 -p 0 -q 0 -u 1 -v 1 -l 1 -j 1 -m conv -g 1 -t 1 -V 0
+MIOpen Forward Conv. Algorithm: 0
+GPU Kernel Time Forward Conv. Elapsed: 1.053473 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: fwd-conv1x1u1, 64, 512, 7, 7, 1, 1, 2048,  6576668672, 10616832, 25690112, 6243, 34, 1.053473
+MIOpen Backward Data Conv. Algorithm: 1
+GPU Kernel Time Backward Data Conv. Elapsed: 1.066790 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdd-conv1x1u1, 64, 512, 1, 1, 2048, 7, 7,  6576668672, 272629760, 25690112, 6165, 280, 1.066790
+MIOpen Backward Weights Conv. Algorithm: 1
+GPU Kernel Time Backward Weights Conv. Elapsed: 1.066666 ms (average)
+stats: name, n, c, ho, wo, x, y, k, flopCnt, bytesRead, bytesWritten, GFLOPs, GB/s, timeMs
+stats: bwdw-conv1x1u1, 64, 512, 7, 7, 1, 1, 2048,  6576668672, 0, 0, 6166, 0, 1.066666

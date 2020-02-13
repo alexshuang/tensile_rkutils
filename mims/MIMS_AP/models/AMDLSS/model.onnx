@@ -1,0 +1,74 @@
+	onnx-mims:ƒ	
+p
+gpu_0/data_0
+gpu_0/conv1_w_0gpu_0/conv1_1"Conv*
+strides@@ *
+pads@@@@ *
+kernel_shape@@ 
+p
+gpu_0/data_0
+gpu_0/conv2_w_0gpu_0/conv2_1"Conv*
+strides@@ *
+pads@@@@ *
+kernel_shape@@ 
+#
+gpu_0/conv2_1gpu_0/act2_1"Tanh
+p
+gpu_0/act2_1
+gpu_0/conv2_w_1gpu_0/conv2_2"Conv*
+strides@@ *
+pads@@@@ *
+kernel_shape@@ 
+#
+gpu_0/conv2_2gpu_0/act2_2"Tanh
+p
+gpu_0/act2_2
+gpu_0/conv2_w_2gpu_0/conv2_3"Conv*
+strides@@ *
+pads@@@@ *
+kernel_shape@@ 
+#
+gpu_0/conv2_3gpu_0/act2_4"Tanh
+0
+gpu_0/act2_4
+gpu_0/conv1_1gpu_0/sum1_5"Sum
+d
+gpu_0/sum1_5gpu_0/ps1_6"PixelShuffle*
+shuffle_factor_height *
+shuffle_factor_width amdlss* €Bgpu_0/data_0*0Bgpu_0/conv1_w_0* €Bgpu_0/data_0*0Bgpu_0/conv2_w_0*00Bgpu_0/conv2_w_1*00Bgpu_0/conv2_w_2Z(
+gpu_0/data_0
+
+
+
+ 
+€Z)
+gpu_0/conv1_w_0
+
+0
+
+
+Z(
+gpu_0/data_0
+
+
+
+ 
+€Z)
+gpu_0/conv2_w_0
+
+0
+
+
+Z)
+gpu_0/conv2_w_1
+
+0
+0
+
+Z)
+gpu_0/conv2_w_2
+
+0
+0
+
+B

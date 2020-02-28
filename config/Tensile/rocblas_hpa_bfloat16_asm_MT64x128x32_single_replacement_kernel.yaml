@@ -72,9 +72,7 @@ BenchmarkProblems:
       BenchmarkJoinParameters:
       BenchmarkFinalParameters:
         - ProblemSizes:
-          - Exact: [ 960,1024,1,1024 ]
-          - Exact: [ 1024,1024,1,1024 ]
-          - Exact: [ 4096, 4096,1, 4096 ]
+          - Exact: [ 960, 1024, 1, 1024 , 992,  992,  1056, 1056]
 
 #  ########################################
 #LibraryLogic:

@@ -8,6 +8,12 @@ from pathlib import Path
 from functools import partial
 
 
+def dtype_size(dtype:str):
+    elem_per_dword, elem_len = 1, 4
+    if dtype == 'fp16' or dtype == 'bf16': elem_per_dword, elem_len = 2, 2
+    return elem_per_dword, elem_len
+
+
 def reg_str(s, start_off=0, end_off=0):
     if isinstance(s, str) and (s.startswith('v[') or s.startswith('s[')):
         return s
@@ -49,6 +55,8 @@ def get_mfma_instr_config(s:str):
     d_regs_len, a_regs_len, b_regs_len = 16, 2, 2
     if s == '32x32x8f16':
         d_regs_len, a_regs_len, b_regs_len = 16, 2, 2
+    elif s == '32x32x4bf16':
+        d_regs_len, a_regs_len, b_regs_len = 16, 1, 1
     return (d_regs_len, d_regs_len, a_regs_len, b_regs_len)
 
 
@@ -249,7 +257,7 @@ class Sp3Writer():
         dest, src0, src1 = reg_str(dest), reg_str(src0), reg_str(src1)
         self.write_line('v_accvgpr_%s\t%s, %s, %s' % (op, dest, src0, src1), **kwargs)
 
-    def ds_read(self, dest, src, off, dtype='b64', **kwargs):
+    def ds_read(self, dest, src, off, dtype, **kwargs):
         dest, src = reg_str(dest), reg_str(src)
         self.write_line('ds_read_%s\t%s, %s offset:%s' % (dtype, dest, src, off), **kwargs)
 
@@ -269,20 +277,6 @@ class Sp3Writer():
 
     def fp16(self, var, dtype='f32', **kwargs):
         self.vop1_instr('cvt_f16', dtype, var, var, **kwargs)
-
-
-def dtype_size(dtype:str):
-    elem_per_dword, elem_len = 1, 4
-    if dtype == 'fp16' or dtype == 'f16': elem_per_dword, elem_len = 2, 2
-    return elem_per_dword, elem_len
-
-
-def lds_dtype_size(sz):
-    dtype, dw = 'b64', 2
-    n = sz // 4
-    if n == 0 and sz == 2:
-        dtype, dw, n = 'b32', 1, 1
-    return dtype, dw, n
 
 
 class KernGenerator(Sp3Writer):
@@ -339,6 +333,11 @@ class KernGenerator(Sp3Writer):
 
     def cvt2bytes(self, var):
         self.v_lshl(var, to_shift_bit(self.elem_len), var)
+
+    def trans2dtype(sz:int):
+        dw = sz // 4
+        dtype = 'b128' if dw == 4 else 'b64' if dw == 2 else 'b32'
+        return dtype, dw
 
     def define_vars(self, var_dict:dict=None):
         for k in ['sgpr', 'vgpr']:
@@ -864,13 +863,17 @@ class Tensor(KernGenerator):
         subgrp_offset = self.rw_len_per_subgrp + ' * 2'
         self.lds_instrs = []
         acc = 0
+        dtype, dw = self.trans2dtype(self.lds_rw_len_per_thread)
         # load with pingpang
         for k in [0, 1]:
             offset = 0
             for i in range(self.mac_unroll_cnt):
                 for j in range(blocks):
-                    self.lds_instrs.append(((self.regs, acc + j * self.lds_lane_len + i * 2), (self.l_r_addr0, k),
-                            '%s%d' % ('%d * %s + ' % (j, subgrp_offset) if j else '', offset)))
+                    self.lds_instrs.append((
+                        (self.regs, acc + j * self.lds_lane_len + i * dw),
+                        (self.l_r_addr0, k),
+                        '%s%d' % ('%d * %s + ' % (j, subgrp_offset) if j else '', offset),
+                        dtype))
                 offset += self.lds_rw_len_per_lane
             acc += blocks * self.lds_lane_len
         self.lds_instrs.reverse() # for pop

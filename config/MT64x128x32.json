@@ -1,5 +1,5 @@
 {
-    "sregs": {
+    "sgpr": {
         "sgprKernArgAddress": 0,
         "sgprWorkGroup0": 2,
         "sgprWorkGroup1": 3,
@@ -44,10 +44,10 @@
         "sgprLocalWriteAddrA": 76,
         "sgprLocalWriteAddrB": 78,
         "sgprHWID": 80,
+        "hw_id": 80,
         "sgprFetchSubGrpId": 82,
         "sgprMACSubGrpId": 84
     },
-
     "kargs": {
         "sgprTensor2dSizeC": 0,
         "sgprTensor2dSizeA": 8,
@@ -68,8 +68,7 @@
         "sizeL": 108,
         "sgprSizesSum": 108 
     },
-
-    "vregs": {
+    "vgpr": {
         "vgprValuC": 0,
         "vgprAcc": 0,
         "vgprValuA_X0_I0": 32,
@@ -87,19 +86,19 @@
         "vgprGlobalWriteOfvarC": 104,
         "vgprTmp": 106
     },
-
     "mfma": {
-        "simd": 4,
         "m": 32,
         "n": 32,
         "k": 8
     },
-    "glvw": 1,
-    "mt": {
-        "h": 64,
-        "w": 128
-    },
-    "k": 32,
-	"thread_tile": 4,
-	"prefetch": 1
+    "general": {
+        "dtype": "fp16",
+        "M": 960,
+        "N": 1024,
+        "K": 1024,
+        "MT0": 64,
+        "MT1": 128,
+        "depthU": 32,
+        "glvw": 1
+    }
 }

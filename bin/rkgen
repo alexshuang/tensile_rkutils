@@ -919,7 +919,7 @@ class MACOperator(KernGenerator):
         self.store_instrs = []
         for i in range(self.blocks0):
             for o in range(n):
-                self.store_instrs.append((o, i * block_offset + o * offset, store_dw))
+                self.store_instrs.append((o, i * block_offset + o * (offset // 2), store_dw))
         self.store_instrs.reverse()
         self.store_instrs *= self.blocks1
 

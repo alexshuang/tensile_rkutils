@@ -334,8 +334,8 @@ class KernGenerator(Sp3Writer):
     def cvt2bytes(self, var):
         self.v_lshl(var, to_shift_bit(self.elem_len), var)
 
-    def trans2dtype(sz:int):
-        dw = sz // 4
+    def size2dtype(self, sz:int):
+        dw = sz // 4 # dwords
         dtype = 'b128' if dw == 4 else 'b64' if dw == 2 else 'b32'
         return dtype, dw
 
@@ -863,7 +863,7 @@ class Tensor(KernGenerator):
         subgrp_offset = self.rw_len_per_subgrp + ' * 2'
         self.lds_instrs = []
         acc = 0
-        dtype, dw = self.trans2dtype(self.lds_rw_len_per_thread)
+        dtype, dw = self.size2dtype(self.lds_rw_len_per_thread)
         # load with pingpang
         for k in [0, 1]:
             offset = 0

@@ -86,11 +86,6 @@
         "vgprGlobalWriteOfvarC": 104,
         "vgprTmp": 106
     },
-    "mfma": {
-        "m": 32,
-        "n": 32,
-        "k": 8
-    },
     "general": {
         "dtype": "fp16",
         "M": 960,
@@ -99,6 +94,7 @@
         "MT0": 64,
         "MT1": 128,
         "depthU": 32,
-        "glvw": 1
+        "glvw": 1,
+        "mfma": "32x32x8f16"
     }
 }

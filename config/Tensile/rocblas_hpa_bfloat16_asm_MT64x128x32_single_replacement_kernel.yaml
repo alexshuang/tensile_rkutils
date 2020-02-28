@@ -55,16 +55,16 @@ BenchmarkProblems:
       ForkParameters:
         - PrefetchGlobalRead: [True]
         - ThreadTile:
-          - [ 4, 8 ]
+          - [ 4, 4 ]
         - WorkGroup:
-          - [ 16, 16, 2 ]
+          - [ 16, 32, 1 ]
         - WorkGroupMapping: [8]
         - GlobalSplitU: [1]
         - DepthU: [32]
         - VectorWidth: [-1]
         - AssertSummationElementMultiple: [8]
         - AssertFree0ElementMultiple: [8]
-        - ReplacementKernel: [True]
+#        - ReplacementKernel: [True]
       BenchmarkForkParameters:
       JoinParameters:
         - MacroTile

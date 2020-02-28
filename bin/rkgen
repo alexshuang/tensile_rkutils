@@ -273,7 +273,7 @@ class Sp3Writer():
 
 def dtype_size(dtype:str):
     elem_per_dword, elem_len = 1, 4
-    if dtype == 'fp16': elem_per_dword, elem_len = 2, 2
+    if dtype == 'fp16' or dtype == 'f16': elem_per_dword, elem_len = 2, 2
     return elem_per_dword, elem_len
 
 
@@ -311,7 +311,7 @@ class KernGenerator(Sp3Writer):
         self.block0 = eval(b_k_dt[0])
         self.block1 = eval(b_k_dt[1])
         self.lds_lane_len, dtype = eval(b_k_dt[2][:1]), b_k_dt[2][1:]
-        self.elem_per_dword, self.elem_len = dtype_size(dtype)
+        self.elem_per_dword, self.elem_len = dtype_size(general['dtype'])
         self.glvw = self.glvw0 = self.glvw1 = general['glvw']
         self.lvca = self.block0 // (self.glvw0 * self.elem_per_dword)
         self.lvcb = self.block1 // (self.glvw1 * self.elem_per_dword)

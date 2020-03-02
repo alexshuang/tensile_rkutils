@@ -281,6 +281,9 @@ class Sp3Writer():
     def fp16(self, var, dtype='f32', **kwargs):
         self.vop1_instr('cvt_f16', dtype, var, var, **kwargs)
 
+    def s_nop(self, cnt, **kwargs):
+        self.write_line('s_nop\t%d' % cnt, **kwargs)
+
 
 class KernGenerator(Sp3Writer):
     def __init__(self, conf:dict, fp):
@@ -527,6 +530,87 @@ class KernGenerator(Sp3Writer):
         self.empty_line()
         return self
 
+    def read_lds(self):
+        self.barrier(nl=True)
+
+        self.a.pop_lds_instrs()
+        self.b.pop_lds_instrs()
+        self.a.pop_lds_instrs()
+        self.b.pop_lds_instrs()
+        self.empty_line()
+
+        self.waitcnt(2, 'lgkm')
+        self.pop_mac_instrs()
+        self.empty_line()
+
+        self.a.pop_lds_instrs()
+        self.b.pop_lds_instrs()
+        self.a.pop_lds_instrs()
+        self.b.pop_lds_instrs()
+        self.empty_line()
+
+        self.waitcnt(5, 'lgkm')
+        self.pop_mac_instrs()
+        self.empty_line()
+
+        self.a.pop_lds_instrs(4)
+        self.empty_line()
+
+        self.waitcnt(7, 'lgkm')
+        self.pop_mac_instrs()
+        self.empty_line()
+
+        self.barrier()
+
+        self.a.pop_lds_instrs()
+        self.b.pop_lds_instrs()
+        self.a.pop_lds_instrs()
+        self.b.pop_lds_instrs()
+        self.empty_line()
+
+        self.waitcnt(4, 'lgkm')
+        self.pop_mac_instrs()
+        self.empty_line()
+
+        self.a.pop_lds_instrs()
+        self.b.pop_lds_instrs()
+        self.a.pop_lds_instrs()
+        self.b.pop_lds_instrs()
+        self.empty_line()
+
+        self.waitcnt(6, 'lgkm')
+        self.pop_mac_instrs()
+        self.empty_line()
+
+        self.a.pop_lds_instrs(4)
+        self.empty_line()
+
+        self.waitcnt(8, 'lgkm')
+        self.pop_mac_instrs()
+        self.empty_line()
+
+        self.waitcnt(0, 'lgkm')
+        self.empty_line()
+
+    def mac(self):
+        # lds_read and mfma instrs interleave
+        self.read_lds()
+
+        # MAC loop
+        self.unroll_loop('MAC_loop', self.unroll_matmul, step=2, end=-2)
+
+        while len(self.mac_instrs):
+            self.pop_mac_instrs(auto_fill=False)
+            self.s_nop(12)
+        self.empty_line()
+
+        # store and mfma instrs interleave
+        self.store_C()
+
+        # all instruction lists should be empty.
+        #print("A: %d, B: %d, MAC: %d, store: %d\n", len(self.a.lds_instrs), len(self.b.lds_instrs), len(self.mac_instrs), len(self.store_instrs))
+        assert len(self.a.lds_instrs) == len(self.b.lds_instrs) == len(self.mac_instrs) == len(self.store_instrs) == 0
+
     def mac_phase(self):
         self.create_label('wave0_entry_start')
         self.comments('hide all kern args load latency with ACC VGPR initialization')
@@ -556,99 +640,7 @@ class KernGenerator(Sp3Writer):
         elif self.dtype == 'bf16':
             mac_op = MACOperatorBF16(self.conf, self.fp, self.a, self.b, self.c)
 
-        # mac header
-        self.barrier(cmt='wait for A[0] is ready', nl=True)
-
-        self.a.pop_lds_instrs(8)
-
-        self.barrier(cmt='wait for B[0] is ready', nl=True)
-
-        self.b.pop_lds_instrs(2)
-
-        self.waitcnt(1, 'lgkm')
-
-        mac_op.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
-        mac_op.pop_mac_instrs()
-
-        self.barrier()
-        self.waitcnt(2, 'lgkm')
-        mac_op.pop_mac_instrs(2)
-
-        self.waitcnt(0, 'lgkm')
-
-        mac_op.pop_mac_instrs()
-        self.setprio(0)
-        mac_op.pop_mac_instrs()
-        self.barrier()
-
-        self.a.pop_lds_instrs(3)
-        mac_op.pop_mac_instrs()
-        self.a.pop_lds_instrs(5)
-        mac_op.pop_mac_instrs()
-        self.barrier()
-
-        self.b.pop_lds_instrs(2)
-        self.setprio(1)
-
-        self.waitcnt(1, 'lgkm')
-        mac_op.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
-        self.barrier()
-        mac_op.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
-        mac_op.pop_mac_instrs(2)
-        self.waitcnt(0, 'lgkm')
-
-        mac_op.pop_mac_instrs(2)
-        self.setprio(0)
-        self.barrier()
-        self.a.pop_lds_instrs(3)
-        mac_op.pop_mac_instrs()
-        self.a.pop_lds_instrs(5)
-        mac_op.pop_mac_instrs()
-
-        self.barrier()
-
-        self.b.pop_lds_instrs(2)
-        self.setprio(1)
-
-        # mac loop
-        self.unroll_loop('MAC_loop', mac_op.unroll_matmul, step=2, end=-4)
-
-        # mac tail, no fetch at the same time
-        self.waitcnt(1, 'lgkm')
-        mac_op.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
-        mac_op.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
-        mac_op.pop_mac_instrs(2)
-        self.waitcnt(0, 'lgkm')
-
-        mac_op.pop_mac_instrs(2)
-        self.barrier()
-        self.a.pop_lds_instrs(3)
-        mac_op.pop_mac_instrs()
-        self.a.pop_lds_instrs(5)
-        mac_op.pop_mac_instrs()
-        self.barrier(nl=True)
-
-        self.b.pop_lds_instrs(2)
-        self.waitcnt(1, 'lgkm')
-        mac_op.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
-        mac_op.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
-        mac_op.pop_mac_instrs(2)
-        self.waitcnt(0, 'lgkm')
-        mac_op.pop_mac_instrs(2)
-        mac_op.pop_mac_instrs(2)
-        
-        # all instruction lists should be empty.
-        # pdb.set_trace()
-        assert len(self.a.lds_instrs) == len(self.b.lds_instrs) == len(mac_op.mac_instrs) == 0
-
-        mac_op.store_C()
+        mac_op.mac()
 
         return self
 
@@ -896,11 +888,10 @@ class Tensor(KernGenerator):
             cnt = min(cnt, len(self.lds_instrs))
         for i in range(cnt):
             self.ds_read(*self.lds_instrs.pop())
-        self.empty_line()
 
     def read_acc_regs(self, cnt, dest=0, offset=0):
         cb = partial(self.v_accvgpr, (self.regs, 'i'),
-                (self.acc_regs, 'i + %d' % offset if offset else 'i'), 0)
+                (self.acc_regs, 'i+%d' % offset if offset else 'i'), 0)
         self.for_loop(dest + cnt, cb, start=dest)
 
 
@@ -917,6 +908,8 @@ class MACOperator(KernGenerator):
         self.push_mac_instrs()
         self.push_store_instrs()
 
+        #print('A: %d, B: %d, MAC: %d, store: %d\n' % (len(self.a.lds_instrs), len(self.b.lds_instrs), len(self.mac_instrs), len(self.store_instrs)))
+
     def push_store_instrs(self):
         d_len = self.mfma_reg_len[0]
         n = d_len // 2 # for fp16 and bf16, fixme for fp32
@@ -926,8 +919,8 @@ class MACOperator(KernGenerator):
         block_offset = offset * self.num_store
         self.store_instrs = []
         for i in range(self.blocks0):
-            for o in range(n):
-                self.store_instrs.append((o, i * block_offset + o * (offset // 2), store_dw))
+            for j in range(0, n, store_dw):
+                self.store_instrs.append((i, j, i * block_offset + j * (offset // 2), store_dw))
         self.store_instrs.reverse()
         self.store_instrs *= self.blocks1
 
@@ -964,60 +957,14 @@ class MACOperator(KernGenerator):
             cnt = min(len(self.mac_instrs), cnt)
         for i in range(cnt):
             self.v_mfma(*self.mac_instrs.pop())
-        self.empty_line()
 
     def unroll_matmul(self):
-        lgkmcnt = 0
-
-        # unroll 0
-        self.comments('unroll 0', bar=True, nl=True)
-        self.waitcnt(1, 'lgkm')
-        self.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
-        self.barrier()
-        self.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.waitcnt(0, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.setprio(0)
-        self.barrier(cmt='A[1] is ready')
+        while len(self.mac_instrs):
+            self.pop_mac_instrs(auto_fill=False)
+            self.s_nop(12)
         self.empty_line()
-
-        self.a.pop_lds_instrs(4)
-        self.pop_mac_instrs()
-        self.a.pop_lds_instrs(4)
-        self.pop_mac_instrs()
-        self.barrier(cmt='B[1] is ready')
+        self.read_lds()
         self.empty_line()
-
-        self.b.pop_lds_instrs(2)
-        self.setprio(1)
-
-        # unroll 1
-        self.comments('unroll 1', bar=True, nl=True)
-        self.waitcnt(1, 'lgkm')
-        self.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
-        self.barrier()
-        self.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.waitcnt(0, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.setprio(0)
-        self.barrier(cmt='A[0] is ready')
-        self.empty_line()
-
-        self.a.pop_lds_instrs(4)
-        self.pop_mac_instrs()
-        self.a.pop_lds_instrs(4)
-        self.pop_mac_instrs()
-        self.barrier(cmt='B[0] is ready')
-        self.empty_line()
-
-        self.b.pop_lds_instrs(2)
-        self.setprio(1)
 
     def merge_fp32(self, i):
         a = i * 2
@@ -1028,20 +975,21 @@ class MACOperator(KernGenerator):
         self.c.v_pk_mul((self.c.regs, i), self.c.alpha, (self.c.regs, i))
 
     def pop_store_instrs(self, cnt=1):
-        for i in range(cnt):
-            a, offset, dw = self.store_instrs.pop()
-            self.merge_fp32(a)
-            b, _, _ = self.store_instrs.pop()
-            self.merge_fp32(b)
-            self.buffer_store((self.c.regs, a), self.c.g_w_addr,
+        for _ in range(cnt):
+            blk_id, i, offset, dw = self.store_instrs.pop()
+            self.c.read_acc_regs(dw * 2, dest=i * dw, offset=(blk_id * self.mfma_reg_len[0]))
+            self.merge_fp32(i)
+            self.merge_fp32(i + 1)
+            self.buffer_store((self.c.regs, i), self.c.g_w_addr,
                     self.c.srd, dw, offset=offset)
-            self.empty_line()
 
     def store_C(self):
-        for i in range(self.blocks1):
-            for j in range(self.blocks0):
-                self.c.read_acc_regs(self.mfma_reg_len[0], offset=j * self.mfma_reg_len[0])
-                self.pop_store_instrs(self.num_store)
+        while len(self.store_instrs):
+            if (len(self.mac_instrs)):
+                self.pop_mac_instrs()
+                self.empty_line()
+            self.pop_store_instrs()
+            self.empty_line()
 
 
 class MACOperatorBF16(MACOperator):
@@ -1054,7 +1002,11 @@ class MACOperatorBF16(MACOperator):
 
     def pop_store_instrs(self, cnt=1):
         for i in range(cnt):
-            a, offset, dw = self.store_instrs.pop()
+            block_id, i, offset, dw = self.store_instrs.pop()
+            self.c.read_acc_regs(self.mfma_reg_len[0], offset=j * self.mfma_reg_len[0])
+            
+
+
             self.merge_bf16(a)
             b, _, _ = self.store_instrs.pop()
             self.merge_bf16(b)

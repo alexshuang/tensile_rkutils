@@ -9,9 +9,9 @@ from functools import partial
 
 
 def dtype_size(dtype:str):
-    elem_per_dword, elem_len = 1, 4
-    if dtype == 'fp16' or dtype == 'bf16': elem_per_dword, elem_len = 2, 2
-    return elem_per_dword, elem_len
+    num_elem_per_dword, elem_len = 1, 4
+    if dtype == 'fp16' or dtype == 'bf16': num_elem_per_dword, elem_len = 2, 2
+    return num_elem_per_dword, elem_len
 
 
 def reg_str(s, start_off=0, end_off=0):
@@ -309,10 +309,10 @@ class KernGenerator(Sp3Writer):
         self.block0 = eval(b_k_dt[0])
         self.block1 = eval(b_k_dt[1])
         self.lds_lane_len = eval(b_k_dt[2][:1])
-        self.elem_per_dword, self.elem_len = dtype_size(self.dtype)
+        self.num_elem_per_dword, self.elem_len = dtype_size(self.dtype)
         self.glvw = self.glvw0 = self.glvw1 = general['glvw']
-        self.lvca = self.block0 // (self.glvw0 * self.elem_per_dword)
-        self.lvcb = self.block1 // (self.glvw1 * self.elem_per_dword)
+        self.lvca = self.block0 // (self.glvw0 * self.num_elem_per_dword)
+        self.lvcb = self.block1 // (self.glvw1 * self.num_elem_per_dword)
         self.threadtile0 = (64 // self.lvca) # wavefront: 64
         self.threadtile1 = (64 // self.lvcb)
         self.MT0 = general['MT0']
@@ -322,7 +322,7 @@ class KernGenerator(Sp3Writer):
         self.vw0 = self.subgrp0 // self.threadtile0
         self.vw1 = self.subgrp1 // self.threadtile1
         self.depthU = general['depthU']
-        self.rw_len_per_wave = 64 * general['glvw'] * self.elem_per_dword * self.elem_len
+        self.rw_len_per_wave = 64 * general['glvw'] * self.num_elem_per_dword * self.elem_len
         self.tmp_regs = "vgprTmp"
         self.lds_threads_per_lane0 = 64 // self.block0
         self.lds_threads_per_lane1 = 64 // self.block1
@@ -434,7 +434,7 @@ class KernGenerator(Sp3Writer):
         self.update_lds_ptr()
         for i in range(self.vw):
             self.buffer_load((self.g2l, i), (self.g_r_addr, i),
-                    self.srd, lds=lds,
+                    self.srd, lds=lds, dw=self.glvw,
                     offset='%s * %d' % (self.rw_len_per_wave, i))
         self.empty_line()
         return self.vw
@@ -731,7 +731,7 @@ class Tensor(KernGenerator):
         # start address of thread
         self.comments('%s: address of thread' % thread_addr)
         self.v_mask(thread_addr, self.lane_len - 1, self.tid)
-        self.v_lshl(thread_addr, to_shift_bit(self.elem_per_dword), thread_addr, cmt='scale elements per dword')
+        self.v_lshl(thread_addr, to_shift_bit(self.num_elem_per_dword), thread_addr, cmt='scale elements per dword')
 
         self.comments('%s: global read address' % self.g_r_addr)
         self.v_add(self.g_r_addr, lane_addr, thread_addr, dtype='u32', carry_out=True)
@@ -774,7 +774,7 @@ class Tensor(KernGenerator):
         tid_lane = 'v1'
         self.comments('locate the address of specify thread')
         self.v_lshr(tid_lane, to_shift_bit(self.block), self.tid)
-        self.v_lshl(tid_lane, to_shift_bit(self.elem_per_dword * 2), tid_lane, cmt='read 2 dwords per thread')
+        self.v_lshl(tid_lane, to_shift_bit(self.num_elem_per_dword * 2), tid_lane, cmt='read 2 dwords per thread')
         self.v_add(self.l_r_addr0, tid_lane, self.l_r_addr0, dtype='u32')
         self.cvt2bytes(self.l_r_addr0)
         self.empty_line()
@@ -847,7 +847,7 @@ class Tensor(KernGenerator):
 
     def update_fetch_addr(self, prio=0):
         self.comments('increment global address of %s to next iteration' % self.mat)
-        offset = self.depthU * self.glvw * self.elem_per_dword
+        offset = self.depthU * self.glvw * self.num_elem_per_dword
 
         # update to next iteration 
         if prio:

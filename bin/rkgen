@@ -184,6 +184,9 @@ class Sp3Writer():
     def v_lshr_or(self, dest, src0, src1, src2, dtype='b32', **kwargs):
         self.v_lsh_or(dest, src0, src1, src2, dtype=dtype, ldir=False, **kwargs)
 
+    def v_and_or(self, dest, src0, src1, src2, dtype, **kwargs):
+        self.vop3_instr('and_or', dtype, dest, src0, src1, src2, **kwargs)
+
     def v_mov(self, dest, src, dtype='b32', **kwargs):
         self.vop1_instr('mov', dtype, dest, src, **kwargs)
 
@@ -301,11 +304,12 @@ class KernGenerator(Sp3Writer):
         self.acc_regs = 'vgprAcc'
         self.alpha = 'sgprAlpha'
         general = getattr(self, 'general')
+        self.dtype = general['dtype']
         b_k_dt = general['mfma'].split('x')
         self.block0 = eval(b_k_dt[0])
         self.block1 = eval(b_k_dt[1])
-        self.lds_lane_len, dtype = eval(b_k_dt[2][:1]), b_k_dt[2][1:]
-        self.elem_per_dword, self.elem_len = dtype_size(general['dtype'])
+        self.lds_lane_len = eval(b_k_dt[2][:1])
+        self.elem_per_dword, self.elem_len = dtype_size(self.dtype)
         self.glvw = self.glvw0 = self.glvw1 = general['glvw']
         self.lvca = self.block0 // (self.glvw0 * self.elem_per_dword)
         self.lvcb = self.block1 // (self.glvw1 * self.elem_per_dword)
@@ -547,7 +551,10 @@ class KernGenerator(Sp3Writer):
 
         c.global_mem_addressing()
 
-        mac_op = MACOperator(self.conf, self.fp, self.a, self.b, self.c)
+        if self.dtype == 'fp16':
+            mac_op = MACOperator(self.conf, self.fp, self.a, self.b, self.c)
+        elif self.dtype == 'bf16':
+            mac_op = MACOperatorBF16(self.conf, self.fp, self.a, self.b, self.c)
 
         # mac header
         self.barrier(cmt='wait for A[0] is ready', nl=True)
@@ -638,6 +645,7 @@ class KernGenerator(Sp3Writer):
         mac_op.pop_mac_instrs(2)
         
         # all instruction lists should be empty.
+        # pdb.set_trace()
         assert len(self.a.lds_instrs) == len(self.b.lds_instrs) == len(mac_op.mac_instrs) == 0
 
         mac_op.store_C()
@@ -1037,15 +1045,30 @@ class MACOperator(KernGenerator):
 
 
 class MACOperatorBF16(MACOperator):
+    def merge_bf16(self, i):
+        a = i * 2
+        b = a + 1
+        self.v_lshr((self.c.regs, a), 16, (self.c.regs, a))
+        self.v_and_or((self.c.regs, i), (self.c.regs, b),
+                (self.tmp_regs, 1), (self.c.regs, a))
+
     def pop_store_instrs(self, cnt=1):
         for i in range(cnt):
-            a, offset = self.store_instrs.pop()
-            self.merge_fp32(a)
-            b, _ = self.store_instrs.pop()
-            self.merge_fp32(b)
+            a, offset, dw = self.store_instrs.pop()
+            self.merge_bf16(a)
+            b, _, _ = self.store_instrs.pop()
+            self.merge_bf16(b)
             self.buffer_store((self.c.regs, a), self.c.g_w_addr,
-                    self.c.srd, offset=offset)
+                    self.c.srd, dw, offset=offset)
             self.empty_line()
+
+    def store_C(self):
+        super().store_C()
+        self.write_line('s_mov_b32     s84, roundMaskVal')
+        self.write_line('v_xor_b32     v[vgprTmp+1], v[vgprTmp],v[vgprTmp]')
+        self.write_line('v_or_b32      v[vgprTmp+1], s84, v[vgprTmp+1]')
+        self.empty_line
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

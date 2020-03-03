@@ -539,7 +539,7 @@ class KernGenerator(Sp3Writer):
         self.b.pop_lds_instrs()
         self.empty_line()
 
-        self.waitcnt(0, 'lgkm')
+        self.waitcnt(2, 'lgkm')
         self.pop_mac_instrs()
         self.empty_line()
 
@@ -549,46 +549,48 @@ class KernGenerator(Sp3Writer):
         self.b.pop_lds_instrs()
         self.empty_line()
 
-        self.waitcnt(0, 'lgkm')
-        self.pop_mac_instrs()
-        self.empty_line()
-
-        self.a.pop_lds_instrs()
-        self.b.pop_lds_instrs()
-        self.a.pop_lds_instrs()
-        self.b.pop_lds_instrs()
-        self.empty_line()
-
-        self.waitcnt(0, 'lgkm')
-        self.pop_mac_instrs()
-        self.empty_line()
-
-        self.a.pop_lds_instrs()
-        self.b.pop_lds_instrs()
-        self.a.pop_lds_instrs()
-        self.b.pop_lds_instrs()
-        self.empty_line()
-
-        self.waitcnt(0, 'lgkm')
+        self.waitcnt(5, 'lgkm')
         self.pop_mac_instrs()
         self.empty_line()
 
         self.a.pop_lds_instrs(4)
         self.empty_line()
 
-        self.waitcnt(0, 'lgkm')
+        self.waitcnt(7, 'lgkm')
+        self.pop_mac_instrs()
+        self.empty_line()
+
+        self.barrier()
+
+        self.a.pop_lds_instrs()
+        self.b.pop_lds_instrs()
+        self.a.pop_lds_instrs()
+        self.b.pop_lds_instrs()
+        self.empty_line()
+
+        self.waitcnt(4, 'lgkm')
+        self.pop_mac_instrs()
+        self.empty_line()
+
+        self.a.pop_lds_instrs()
+        self.b.pop_lds_instrs()
+        self.a.pop_lds_instrs()
+        self.b.pop_lds_instrs()
+        self.empty_line()
+
+        self.waitcnt(6, 'lgkm')
         self.pop_mac_instrs()
         self.empty_line()
 
         self.a.pop_lds_instrs(4)
         self.empty_line()
 
-        self.waitcnt(0, 'lgkm')
+        self.waitcnt(8, 'lgkm')
         self.pop_mac_instrs()
         self.empty_line()
 
         self.waitcnt(0, 'lgkm')
-        self.barrier(nl=True)
+        self.empty_line()
 
     def mac(self):
         # lds_read and mfma instrs interleave

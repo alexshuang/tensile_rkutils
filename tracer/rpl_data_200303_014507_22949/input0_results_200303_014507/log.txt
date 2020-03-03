@@ -1,0 +1,25 @@
+ROCProfiler: input from "tracer/rpl_data_200303_014507_22949/input0.xml"
+  gpu_index = 
+  kernel = 
+  range = 
+  0 metrics
+  1 traces
+    SQTT (
+      MASK = 0xf09
+      SE_MASK = 0x1
+      TOKEN_MASK = 0x344b
+      TOKEN_MASK2 = 0xffffffff
+    )
+################################################################################
+# Device[0]: Device 738c (gfx908)
+# Compute:   1536 GFlop/s (120 CUs @ 100 MHz)
+# Bandwidth: 102 GB/s (4096-bit @ 100 MHz)
+################################################################################
+Tensile Client Columns: GFlops (clock-normalized), GFlops (raw), SolName, KernelMs, Valid/Total, CoreMhz, MemMhz, TempC, FanSpeed, Idx/Total, TimeStamp
+Initializing 351 MBytes.................
+
+
+Problem[0/1]: 960, 1024, 1, 1024, 992, 992, 1056, 1056
+Kernel file not found; exiting.
+
+ROCPRofiler: 0 contexts collected, output directory tracer/rpl_data_200303_014507_22949/input0_results_200303_014507

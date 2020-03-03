@@ -14,6 +14,10 @@ def dtype_size(dtype:str):
     return elem_per_dword, elem_len
 
 
+def dw_str(dw:int):
+    return 'b64' if dw == 2 else 'b32'
+
+
 def reg_str(s, start_off=0, end_off=0):
     if isinstance(s, str) and (s.startswith('v[') or s.startswith('s[')):
         return s
@@ -306,13 +310,13 @@ class KernGenerator(Sp3Writer):
         general = getattr(self, 'general')
         self.dtype = general['dtype']
         b_k_dt = general['mfma'].split('x')
-        self.block0 = eval(b_k_dt[0])
-        self.block1 = eval(b_k_dt[1])
-        self.lds_lane_len = eval(b_k_dt[2][:1])
+        self.mfma_block0 = eval(b_k_dt[0])
+        self.mfma_block1 = eval(b_k_dt[1])
+        self.mfma_k = eval(b_k_dt[2][:1])
         self.elem_per_dword, self.elem_len = dtype_size(self.dtype)
         self.glvw = self.glvw0 = self.glvw1 = general['glvw']
-        self.lvca = self.block0 // (self.glvw0 * self.elem_per_dword)
-        self.lvcb = self.block1 // (self.glvw1 * self.elem_per_dword)
+        self.lvca = self.mfma_block0 // (self.glvw0 * self.elem_per_dword)
+        self.lvcb = self.mfma_block1 // (self.glvw1 * self.elem_per_dword)
         self.threadtile0 = (64 // self.lvca) # wavefront: 64
         self.threadtile1 = (64 // self.lvcb)
         self.MT0 = general['MT0']
@@ -324,13 +328,10 @@ class KernGenerator(Sp3Writer):
         self.depthU = general['depthU']
         self.rw_len_per_wave = 64 * general['glvw'] * self.elem_per_dword * self.elem_len
         self.tmp_regs = "vgprTmp"
-        self.lds_threads_per_lane0 = 64 // self.block0
-        self.lds_threads_per_lane1 = 64 // self.block1
-        self.lds_rw_len_per_thread0 = self.lds_lane_len // self.lds_threads_per_lane0 * self.elem_len
-        self.lds_rw_len_per_thread1 = self.lds_lane_len // self.lds_threads_per_lane1 * self.elem_len
-        self.lds_rw_len_per_lane0 = self.lds_lane_len * self.elem_len
-        self.lds_rw_len_per_lane1 = self.lds_lane_len * self.elem_len
-        self.mac_unroll_cnt = self.depthU // self.lds_lane_len
+        self.mac_unroll_cnt = self.depthU // self.mfma_k
+        if self.MT0 == 64 and self.MT1 == 128:
+            self.mfma_blocks0, self.mfma_blocks1 = 2, 1
+        self.mfma_reg_len = get_mfma_instr_config(getattr(self, 'general')['mfma'])
 
     def load_karg(self, var, dw=1):
         self.s_load(var, self.karg_addr, getattr(self, 'kargs')[var], dw=dw)
@@ -683,7 +684,7 @@ class Tensor(KernGenerator):
         self.mt = self.MT0 if mat == 'A' else self.MT1
         self.vw = self.vw0 if mat == 'A' else self.vw1
         self.glvw = self.glvw0 if mat == 'A' else self.glvw1
-        self.block = self.block0 if mat == 'A' else self.block1
+        self.mfma_block = self.mfma_block0 if mat == 'A' else self.mfma_block1
         self.wg_id = self.wg0 if mat == 'A' else self.wg1
         self.subgrp = self.subgrp0 if mat == 'A' else self.subgrp1
         self.lane_len = self.lvca if mat == 'A' else self.lvcb
@@ -691,9 +692,8 @@ class Tensor(KernGenerator):
         self.simd_id = 'sgprFetchSubGrpId'
         self.tid = 'vgprSerial+1'
         self.vmcnt = self.vw
-        self.lds_threads_per_lane = self.lds_threads_per_lane0 if mat == 'A' else self.lds_threads_per_lane1
-        self.lds_rw_len_per_lane = self.lds_rw_len_per_lane0 if mat == 'A' else self.lds_rw_len_per_lane1
-        self.lds_rw_len_per_thread = self.lds_rw_len_per_thread0 if mat == 'A' else self.lds_rw_len_per_thread1
+        self.mfma_blocks = self.mfma_blocks0 if mat == 'A' else self.mfma_blocks1
+        self.lds_read_dw = self.mfma_reg_len[2] if mat == 'A' else self.mfma_reg_len[3]
 
     def create_descriptor(self):
         self.comments('Create Tensor Descriptor of %s' % self.mat, bar=True, nl=True)
@@ -760,8 +760,8 @@ class Tensor(KernGenerator):
         self.comments('Local memory addressing of %s' % self.mat, bar=True, nl=True)
         self.comments('locate the address of lane/threadtile')
         tid = 'v1'
-        self.v_mask(tid, self.tid, self.block - 1) # tid of wavefront mask mfma block, if block = 32, then 2 threads per lane
-        self.v_mul(self.l_r_addr0, self.block, tid, dtype='u32') # map to column
+        self.v_mask(tid, self.tid, self.mfma_block - 1) # tid of wavefront mask mfma block, if block = 32, then 2 threads per lane
+        self.v_mul(self.l_r_addr0, self.mfma_block, tid, dtype='u32') # map to column
         self.empty_line()
 
         # calc pad length
@@ -773,7 +773,7 @@ class Tensor(KernGenerator):
         # 2 threads map to 1 lane, read threadtile elements per thread
         tid_lane = 'v1'
         self.comments('locate the address of specify thread')
-        self.v_lshr(tid_lane, to_shift_bit(self.block), self.tid)
+        self.v_lshr(tid_lane, to_shift_bit(self.mfma_block), self.tid)
         self.v_lshl(tid_lane, to_shift_bit(self.elem_per_dword * 2), tid_lane, cmt='read 2 dwords per thread')
         self.v_add(self.l_r_addr0, tid_lane, self.l_r_addr0, dtype='u32')
         self.cvt2bytes(self.l_r_addr0)
@@ -828,7 +828,7 @@ class Tensor(KernGenerator):
         self.serial_tid = 'vgprSerial'
         self.v_lshl(self.serial_tid, 6, (self.serial_tid, 2), cmt='threadIdx = simdId<<6')
         self.v_add(self.serial_tid, self.tid, self.serial_tid, dtype='u32', cmt='threadIdx = threadIdx + 0-63')
-        self.v_mul('v4', self.block, (self.serial_tid, 2), dtype='u32', cmt='scale by sub-tile-size 32 (B-tile/128)')
+        self.v_mul('v4', self.mfma_block, (self.serial_tid, 2), dtype='u32', cmt='scale by sub-tile-size 32 (B-tile/128)')
         self.v_mul('v3', 'v4', self.stride0, dtype='u32', cmt='wavestart vgpr')
         self.v_mask('v4', '0x1f', self.serial_tid, cmt='vectorStaticDiv vgprTmp = vgprSerial % 31')
         self.v_mul('v5', 'v4', self.stride0, dtype='u32', cmt='rowstart VGPR')
@@ -867,31 +867,30 @@ class Tensor(KernGenerator):
         return res_cnt
 
     def push_lds_instrs(self):
-        blocks = calc_mfma_blocks(self.block, self.subgrp)
         subgrp_offset = self.rw_len_per_subgrp + ' * 2'
+        lane_len = self.mfma_k * self.mfma_blocks
+        assert self.mfma_reg_len[2] == self.mfma_reg_len[3]
+        rw_len = 64 // self.mfma_block * self.mfma_reg_len[2] * 4
         self.lds_instrs = []
-        acc = 0
-        dtype, dw = self.size2dtype(self.lds_rw_len_per_thread)
-        # load with pingpang
-        for k in [0, 1]:
+        for k in [0, 1]: # pingpang
             offset = 0
             for i in range(self.mac_unroll_cnt):
-                for j in range(blocks):
+                for j in range(self.mfma_blocks):
                     self.lds_instrs.append((
-                        (self.regs, acc + j * self.lds_lane_len + i * dw),
+                        (self.regs, k * lane_len + j * self.mfma_k + i * self.lds_read_dw),
                         (self.l_r_addr0, k),
                         '%s%d' % ('%d * %s + ' % (j, subgrp_offset) if j else '', offset),
-                        dtype))
-                offset += self.lds_rw_len_per_lane
-            acc += blocks * self.lds_lane_len
+                        dw_str(self.lds_read_dw)))
+                offset += rw_len
         self.lds_instrs.reverse() # for pop
         self._lds_instrs = copy.copy(self.lds_instrs)
-        return 2 * self.mac_unroll_cnt * blocks
+        return 2 * self.mac_unroll_cnt * self.mfma_blocks
 
     def pop_lds_instrs(self, cnt=1, auto_fill=True):
         if auto_fill:
             if len(self.lds_instrs) == 0 or len(self.lds_instrs) < cnt:
                 self.lds_instrs = copy.copy(self._lds_instrs) + self.lds_instrs
+                self.barrier(nl=True, cmt='%s is ready' % self.mat)
         else:
             cnt = min(cnt, len(self.lds_instrs))
         for i in range(cnt):
@@ -909,9 +908,6 @@ class MACOperator(KernGenerator):
         super().__init__(conf, fp)
         self.a, self.b, self.c = a, b, c
         # mfma blocks in two directions
-        self.blocks0 = calc_mfma_blocks(self.block0, self.subgrp0)
-        self.blocks1 = calc_mfma_blocks(self.block1, self.subgrp1)
-        self.mfma_reg_len = get_mfma_instr_config(getattr(self, 'general')['mfma'])
         self.a.push_lds_instrs()
         self.b.push_lds_instrs()
         self.push_mac_instrs()
@@ -925,36 +921,33 @@ class MACOperator(KernGenerator):
         self.num_store = n // store_dw
         block_offset = offset * self.num_store
         self.store_instrs = []
-        for i in range(self.blocks0):
-            for o in range(n):
-                self.store_instrs.append((o, i * block_offset + o * (offset // 2), store_dw))
+        for i in range(self.mfma_blocks1):
+            for j in range(self.mfma_blocks0):
+                for o in range(n):
+                    self.store_instrs.append((o, j * block_offset + o * (offset // 2), store_dw))
         self.store_instrs.reverse()
-        self.store_instrs *= self.blocks1
+        self.store_instrs *= self.mfma_blocks1
 
     def push_mac_instrs(self):
-        assert self.block0 == self.block1
-        acc_a, acc_b = 0, 0
+        lane_len0 = self.mfma_k * self.mfma_blocks0
+        lane_len1 = self.mfma_k * self.mfma_blocks1
+        assert self.mfma_reg_len[2] == self.mfma_reg_len[3]
+        rw_len = 64 // self.mfma_block0 * self.mfma_reg_len[2] * 4
         self.mac_instrs = []
         d_off, c_off, a_off, b_off = self.mfma_reg_len
-        # operation by pingpang
-        for k in [0, 1]:
+        for k in [0, 1]: # pingpang
             for i in range(self.mac_unroll_cnt):
-                for j in range(self.blocks0):
-                    self.mac_instrs.append(((self.acc_regs, j * d_off),
-                        (self.a.regs, acc_a + j * self.lds_lane_len + i * a_off),
-                        (self.b.regs, acc_b + i * b_off),
-                        (self.acc_regs, j * c_off)))
-                if self.blocks1 > 1:
-                    for j in range(self.blocks0, self.blocks0 + self.blocks1):
-                        self.mac_instrs.append(((self.acc_regs, j * d_off),
-                            (self.a.regs, acc_a + j * self.lds_lane_len + i * a_off),
-                            (self.b.regs, acc_b + j * self.lds_lane_len + i * b_off),
-                            (self.acc_regs, j * c_off)))
-            acc_a += self.lds_lane_len * self.blocks0
-            acc_b += self.lds_lane_len * self.blocks1
+                blk_off = 0
+                for l in range(self.mfma_blocks1):
+                    for j in range(self.mfma_blocks0):
+                        self.mac_instrs.append(((self.acc_regs, blk_off),
+                            (self.a.regs, k * lane_len0 + j * self.mfma_k + i * a_off),
+                            (self.b.regs, k * lane_len1 + l * self.mfma_k + i * b_off),
+                            (self.acc_regs, blk_off)))
+                        blk_off += d_off
         self.mac_instrs.reverse() # for pop
         self._mac_instrs = copy.copy(self.mac_instrs)
-        return 2 * self.mac_unroll_cnt * self.blocks0 * self.blocks1
+        return 2 * self.mac_unroll_cnt * self.mfma_blocks0 * self.mfma_blocks1
 
     def pop_mac_instrs(self, cnt=1, auto_fill=True):
         if auto_fill:
@@ -1038,8 +1031,8 @@ class MACOperator(KernGenerator):
             self.empty_line()
 
     def store_C(self):
-        for i in range(self.blocks1):
-            for j in range(self.blocks0):
+        for i in range(self.mfma_blocks1):
+            for j in range(self.mfma_blocks0):
                 self.c.read_acc_regs(self.mfma_reg_len[0], offset=j * self.mfma_reg_len[0])
                 self.pop_store_instrs(self.num_store)
 

@@ -95,6 +95,7 @@
         "MT1": 128,
         "depthU": 32,
         "glvw": 1,
+        "lds_read_dw": 1,
         "mfma": "32x32x4bf16"
     }
 }

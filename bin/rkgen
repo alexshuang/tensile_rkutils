@@ -1057,8 +1057,8 @@ class MACOperatorBF16(MACOperator):
         self.pop_mac_instrs()
         self.b.pop_lds_instrs(4)
         self.pop_mac_instrs()
-
         self.barrier()
+
         self.waitcnt(6, 'lgkm')
         self.pop_mac_instrs(2)
         self.waitcnt(5, 'lgkm')
@@ -1097,7 +1097,6 @@ class MACOperatorBF16(MACOperator):
         self.waitcnt(4, 'lgkm')
         self.pop_mac_instrs(2)
         self.waitcnt(0, 'lgkm')
-
         self.pop_mac_instrs(2)
         self.setprio(0)
         self.pop_mac_instrs()
@@ -1174,6 +1173,7 @@ class MACOperatorBF16(MACOperator):
             self.waitcnt(5, 'lgkm')
             self.pop_mac_instrs()
             self.b.pop_lds_instrs(2)
+            self.pop_mac_instrs()
             self.barrier()
             self.waitcnt(6, 'lgkm')
             self.pop_mac_instrs(2)
@@ -1239,8 +1239,7 @@ if __name__ == "__main__":
     if not args.output:
         out_fpath = Path(args.config).stem + '.sp3'
 
-    gen = KernGenerator.from_json(args.config, out_fpath)
-    gen.define_vars().setup_hw_args().fetch_phase().mac_phase().footer()
+    KernGenerator.from_json(args.config, out_fpath).define_vars().setup_hw_args().fetch_phase().mac_phase().footer()
 
     print("[Output]: %s" % out_fpath)
 

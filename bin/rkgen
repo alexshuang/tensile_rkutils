@@ -397,13 +397,17 @@ class KernGenerator(Sp3Writer):
         return self
 
     def footer(self):
+        with open('tail.sp3', 'r') as fp:
+            self.fp.write(fp.read())
+        return self
+        '''
         self.create_label('finish')
         self.waitcnt(0)
         self.end_pgm()
         self.empty_line()
         self.write_line('end', tab=0)
         self.empty_line()
-        return self
+        '''
 
     def get_tid(self):
         #vgprSerial    holds threadIdx
@@ -554,6 +558,8 @@ class KernGenerator(Sp3Writer):
 
         c.global_mem_addressing()
 
+        return self
+'''
         if self.dtype == 'fp16':
             mac_op = MACOperator(self.conf, self.fp, self.a, self.b, self.c)
         elif self.dtype == 'bf16':
@@ -561,8 +567,8 @@ class KernGenerator(Sp3Writer):
 
         mac_op.matmul()
         mac_op.store_C()
+'''
 
-        return self
 
 
 class Tensor(KernGenerator):

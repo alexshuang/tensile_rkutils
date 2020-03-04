@@ -557,7 +557,7 @@ class KernGenerator(Sp3Writer):
         c.create_descriptor()
         d.create_descriptor()
 
-        c.global_mem_addressing()
+        #c.global_mem_addressing()
 
         return self
 '''
@@ -1246,7 +1246,7 @@ if __name__ == "__main__":
     if not args.output:
         out_fpath = Path(args.config).stem + '.sp3'
 
-    KernGenerator.from_json(args.config, out_fpath).define_vars().setup_hw_args().fetch_phase().footer()
+    KernGenerator.from_json(args.config, out_fpath).define_vars().setup_hw_args().fetch_phase().mac_phase().footer()
 
     print("[Output]: %s" % out_fpath)
 

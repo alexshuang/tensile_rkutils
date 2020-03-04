@@ -646,7 +646,6 @@ class KernGenerator(Sp3Writer):
         mac_op.pop_mac_instrs(2)
         
         # all instruction lists should be empty.
-        # pdb.set_trace()
         assert len(self.a.lds_instrs) == len(self.b.lds_instrs) == len(mac_op.mac_instrs) == 0
 
         mac_op.store_C()
@@ -914,17 +913,18 @@ class MACOperator(KernGenerator):
         self.push_store_instrs()
 
     def push_store_instrs(self):
-        d_len = self.mfma_reg_len[0]
-        n = d_len // 2 # for fp16 and bf16, fixme for fp32
-        store_dw = 2
-        offset = store_dw * 2 * 4 # output is fp32 == 4 bytes
-        self.num_store = n // store_dw
-        block_offset = offset * self.num_store
+        lane_len = self.mfma_reg_len[0]
+        n = lane_len // 2 # for fp16 and bf16, fixme for fp32
+        store_dw, src_dw = 2, 2
+        store_offset = store_dw * src_dw * 4
+        accreg_offset, offset = 0, 0
         self.store_instrs = []
         for i in range(self.mfma_blocks1):
             for j in range(self.mfma_blocks0):
-                for o in range(n):
-                    self.store_instrs.append((o, j * block_offset + o * (offset // 2), store_dw))
+                for o in range(0, n, store_dw):
+                    self.store_instrs.append((accreg_offset, o, offset, store_dw))
+                    offset += store_offset
+                accreg_offset += lane_len
         self.store_instrs.reverse()
         self.store_instrs *= self.mfma_blocks1
 
@@ -1021,20 +1021,23 @@ class MACOperator(KernGenerator):
         self.c.v_pk_mul((self.c.regs, i), self.c.alpha, (self.c.regs, i))
 
     def pop_store_instrs(self, cnt=1):
-        for i in range(cnt):
-            a, offset, dw = self.store_instrs.pop()
-            self.merge_fp32(a)
-            b, _, _ = self.store_instrs.pop()
-            self.merge_fp32(b)
-            self.buffer_store((self.c.regs, a), self.c.g_w_addr,
+        for _ in range(cnt):
+            acc_reg_offset, i, offset, dw = self.store_instrs.pop()
+            self.c.read_acc_regs(dw * 2, dest=i * dw, offset=acc_reg_offset)
+            self.merge_fp32(i)
+            self.merge_fp32(i + 1)
+            self.buffer_store((self.c.regs, i), self.c.g_w_addr,
                     self.c.srd, dw, offset=offset)
-            self.empty_line()
 
     def store_C(self):
-        for i in range(self.mfma_blocks1):
-            for j in range(self.mfma_blocks0):
-                self.c.read_acc_regs(self.mfma_reg_len[0], offset=j * self.mfma_reg_len[0])
-                self.pop_store_instrs(self.num_store)
+        while len(self.store_instrs):
+            '''
+            if (len(self.mac_instrs)):
+                self.pop_mac_instrs()
+                self.empty_line()
+            '''
+            self.pop_store_instrs()
+            self.empty_line()
 
 
 class MACOperatorBF16(MACOperator):

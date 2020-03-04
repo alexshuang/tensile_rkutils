@@ -1,4 +1,130 @@
 
+wave0_entry_start:
+
+  //  accvgpr init
+  //  4*32=128CYCLES
+  // hide all mem loatency with ACC VGPR initialization
+  for var i =0; i < 32; i++
+      v_accvgpr_write v_regs(0,i), 0, 0 
+  end      
+
+  //s_load_dword s[sgprAddressD], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x18 // 
+  //s_load_dword s[sgprAddressD+1], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x1c // 
+  //s_load_dword s[sgprAddressC], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x20 // 
+  //s_load_dword s[sgprAddressC+1], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x24 // 
+  //s_load_dword s[sgprTensor2dSizeC+1], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x4 // 
+  s_load_dwordx2 s[sgprTensor2dSizeC+0:sgprTensor2dSizeC+1], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x0 // 
+  s_load_dwordx4 s[sgprAlpha:sgprSizesFree+1], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x38 // 
+  s_load_dwordx4 s[sgprStridesD+0:sgprStridesC+1], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x40 // 
+  s_load_dwordx4 s[sgprAddressD:sgprAddressC+1], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x18 // 
+  //s_load_dwordx4 s[sgprAlpha:sgprSizesFree+1], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x38 // 
+  //s_load_dwordx2 s[sgprTensor2dSizeC+0:sgprTensor2dSizeC+1], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x0 // 
+  //s_load_dword s[sgprSizesFree+2], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x68 // 
+  //s_load_dword s[sgprOrigStaggerUIter], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x70 //
+  //s_load_dword s[sgprNumWorkGroups0], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x74 // 
+  //s_load_dword s[sgprNumWorkGroups1], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x78 // 
+  //s_load_dword s[sgprNumFullBlocks], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x84 // 
+  //s_load_dword s[sgprWgmRemainder1], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x88 // 
+  //s_load_dword s[sgprMagicNumberWgmRemainder1], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x8c // 
+  //s_load_dword s[sgprStridesD+0], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x40 // 
+  //s_load_dword s[sgprStridesD+1], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x44 // 
+  //s_load_dword s[sgprStridesC+0], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x48 // 
+  //s_load_dword s[sgprStridesC+1], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x4c // 
+  //s_load_dword s[sgprSizesFree+0], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x60 // 
+  //s_load_dword s[sgprSizesFree+1], s[sgprKernArgAddress:sgprKernArgAddress+1], 0x64 // 
+
+   
+/******************************************/
+/* Local Read Addresses                   */
+/******************************************/
+ 
+  //32 lanes for holding M elements
+  v_and_b32        v1, v[vgprSerial+1],  0x1f
+  v_mul_lo_u32     v[vgprLocalReadAddrA+0],  16, v1
+  v_lshrrev_b32    v1, 2, v1
+  v_mul_lo_u32     v1, varlds_pad_qw, v1
+  v_add_u32        v[vgprLocalReadAddrA+0],  v1,  v[vgprLocalReadAddrA+0]
+
+/* local read addresses: final offsets a */
+
+  v_lshrrev_b32    v1, 5,  v[vgprSerial+1]
+  v_add_u32        v[vgprLocalReadAddrA+0], v1, v[vgprLocalReadAddrA+0]
+  v_lshlrev_b32    v[vgprLocalReadAddrA+0], 2, v[vgprLocalReadAddrA+0]  //convert to bytes
+  v_add_u32        v[vgprLocalReadAddrA+0], varA_lds_base_addr,  v[vgprLocalReadAddrA+0]
+  v_add_u32        v[vgprLocalReadAddrA+1], varlds_Asize_per_wg, v[vgprLocalReadAddrA+0]
+
+   s_barrier
+
+/******************************************/
+/* Local Read Addresses Offset B          */
+/******************************************/
+
+  //32 lanes for holding N elements
+  v_and_b32        v1,  v[vgprSerial+1],     0x1f
+  v_mul_lo_u32     v[vgprLocalReadAddrB+0],  16, v1
+  v_lshrrev_b32    v1,  2,  v1
+  v_mul_lo_u32     v1, varlds_pad_qw, v1
+  v_add_u32        v[vgprLocalReadAddrB+0],  v1,  v[vgprLocalReadAddrB+0]
+
+/* local read addresses: final offsets b */
+
+  v_lshrrev_b32    v1,                  5,      v[vgprSerial+1]
+  v_add_u32        v[vgprLocalReadAddrB+0],  v1, v[vgprLocalReadAddrB+0]
+  v_lshlrev_b32    v[vgprLocalReadAddrB+0],  2, v[vgprLocalReadAddrB+0]  //convert to bytes
+
+  s_mul_i32        s84,  s[sgprFetchSubGrpId],    varlds_Bsize_per_wave
+  v_add_u32        v[vgprLocalReadAddrB+0], s84, v[vgprLocalReadAddrB+0]
+  v_add_u32        v[vgprLocalReadAddrB+0],  varB_lds_base_addr,   v[vgprLocalReadAddrB+0]
+  v_add_u32        v[vgprLocalReadAddrB+1], varlds_Bsize_per_wg, v[vgprLocalReadAddrB+0]
+
+  s_waitcnt lgkmcnt(0)
+/*****************************************************************/
+/* Global Address C calculation */
+/*****************************************************************/
+
+  s_mov_b32	   s[sgprSrdC+0], s[sgprAddressC+0]         // init SRD base address (lower)
+  s_mov_b32	   s[sgprSrdC+1], s[sgprAddressC+1]         // init SRD base address (lower)
+  s_mov_b32        s[sgprSrdC+2], 0x80000000 		    // limit at 2*31
+  s_mov_b32        s[sgprSrdC+3], Srd127_96                 // Set bits 127_96 in SRD
+
+  s_mov_b32	   s[sgprSrdD+0], s[sgprAddressD+0]         // init SRD base address (lower)
+  s_mov_b32        s[sgprSrdD+1], s[sgprAddressD+1]	    // set const_stride=4 for idxen
+  s_mov_b32        s[sgprSrdD+2], 0x80000000 		    // limit at 2*31
+  s_mov_b32        s[sgprSrdD+3], Srd127_96		    // Set bits 127_96 in SRD
+
+  s_mul_i32	  s86, 0x80, s[sgprWorkGroup1]		    // <- wg1*MT1
+  s_mul_hi_u32    s85, s86,  s[sgprStridesC+0]
+  s_mul_i32       s84, s86,  s[sgprStridesC+0]		    // scale by stride
+  s_lshl_b64      s[84:85],  s[84:85], 1		    // scale by bpe 
+  s_add_u32       s[sgprSrdC+0], s[sgprSrdC+0], s84         
+  s_addc_u32      s[sgprSrdC+1], s[sgprSrdC+1], s85         
+  s_add_u32       s[sgprSrdD+0], s[sgprSrdD+0], s84         
+  s_addc_u32      s[sgprSrdD+1], s[sgprSrdD+1], s85         
+
+  s_mul_hi_u32    s85, s[sgprWorkGroup2], s[sgprStridesC+1] 	//Scale s[sgprWorkGroup2] by stride
+  s_mul_i32       s84, s[sgprWorkGroup2], s[sgprStridesC+1] 	//Scale s[sgprWorkGroup2] by stride
+  s_lshl_b64      s[84:85],  s[84:85], 1		        // scale by bpe 
+  s_add_u32       s[sgprSrdC+0], s[sgprSrdC+0], s84         
+  s_addc_u32      s[sgprSrdC+1], s[sgprSrdC+1], s85         
+  s_add_u32       s[sgprSrdD+0], s[sgprSrdD+0], s84         
+  s_addc_u32      s[sgprSrdD+1], s[sgprSrdD+1], s85         
+
+  //use threadIdz to re-map threadIdx using for calculating waveId start off set for MAC wves to store 'C'
+  v_lshlrev_b32   v[vgprSerial], 6,    v[vgprSerial+2]	  	// threadIdx = simdId<<6
+  v_add_u32       v[vgprSerial], v[vgprSerial+1], v[vgprSerial] // threadIdx = threadIdx + 0-63
+  v_mul_lo_u32    v4, 0x20, v[vgprSerial+2]	        	// scale by sub-tile-size 32 (B-tile/128)
+  v_mul_lo_u32    v3, v4,   s[sgprStridesC+0] 			// wavestart vgpr
+  v_and_b32	  v4, 0x1f, v[vgprSerial]                       // vectorStaticDiv vgprTmp = vgprSerial % 32
+  v_mul_lo_u32    v5, v4,   s[sgprStridesC+0]			// rowstart VGPR
+  v_and_b32	  v4, 0x3f, v[vgprSerial]                       // vectorStaticDiv vgprTmp = vgprSerial % 32
+  v_lshrrev_b32	  v6, 5,    v4	 		 	        // vectorStaticDiv vgprTmp = vgprSerial / 32 
+  v_lshlrev_b32   v6, 2,    v6			   		// glvw=2
+  v_add_u32	  v[vgprTmp+1], v3,  v5
+
+  s_mul_i32	  s84, 0x40, s[sgprWorkGroup0]			// s84 = wgp0*MT0
+  v_add_co_u32    v[vgprTmp], vcc, s84, v6
+  v_add_lshl_u32  v[vgprGlobalWriteOfvarC], v[vgprTmp], v[vgprTmp+1], 0x1	// c base_addr = wave_start+row_start scaled by BPE
+
   //sync point to load waves
   s_barrier
   //Read A Elements from LDS into VREGS...  

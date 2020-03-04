@@ -353,6 +353,7 @@ class KernGenerator(Sp3Writer):
                 self.def_var(_k, _v)
             self.empty_line()
 
+        self.def_var('varlds_pad_qw', '2')
         self.def_var('BufferLimit', '0x80000000', cmt='2GB limit - set offsets to -1 to exceed this and clamp')
         self.def_var('Srd127_96', '0x20000', cmt='Bits 127:96 of SRD.  Set DataFormat = 32 bit')
         self.def_var('roundMaskVal', '0xffff0000')
@@ -1245,7 +1246,7 @@ if __name__ == "__main__":
     if not args.output:
         out_fpath = Path(args.config).stem + '.sp3'
 
-    KernGenerator.from_json(args.config, out_fpath).define_vars().setup_hw_args().fetch_phase().mac_phase().footer()
+    KernGenerator.from_json(args.config, out_fpath).define_vars().setup_hw_args().fetch_phase().footer()
 
     print("[Output]: %s" % out_fpath)
 

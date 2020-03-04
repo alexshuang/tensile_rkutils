@@ -557,97 +557,7 @@ class KernGenerator(Sp3Writer):
         elif self.dtype == 'bf16':
             mac_op = MACOperatorBF16(self.conf, self.fp, self.a, self.b, self.c)
 
-        # mac header
-        self.barrier(cmt='wait for A[0] is ready', nl=True)
-
-        self.a.pop_lds_instrs(8)
-
-        self.barrier(cmt='wait for B[0] is ready', nl=True)
-
-        self.b.pop_lds_instrs(2)
-
-        self.waitcnt(1, 'lgkm')
-
-        mac_op.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
-        mac_op.pop_mac_instrs()
-
-        self.barrier()
-        self.waitcnt(2, 'lgkm')
-        mac_op.pop_mac_instrs(2)
-
-        self.waitcnt(0, 'lgkm')
-
-        mac_op.pop_mac_instrs()
-        self.setprio(0)
-        mac_op.pop_mac_instrs()
-        self.barrier()
-
-        self.a.pop_lds_instrs(3)
-        mac_op.pop_mac_instrs()
-        self.a.pop_lds_instrs(5)
-        mac_op.pop_mac_instrs()
-        self.barrier()
-
-        self.b.pop_lds_instrs(2)
-        self.setprio(1)
-
-        self.waitcnt(1, 'lgkm')
-        mac_op.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
-        self.barrier()
-        mac_op.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
-        mac_op.pop_mac_instrs(2)
-        self.waitcnt(0, 'lgkm')
-
-        mac_op.pop_mac_instrs(2)
-        self.setprio(0)
-        self.barrier()
-        self.a.pop_lds_instrs(3)
-        mac_op.pop_mac_instrs()
-        self.a.pop_lds_instrs(5)
-        mac_op.pop_mac_instrs()
-
-        self.barrier()
-
-        self.b.pop_lds_instrs(2)
-        self.setprio(1)
-
-        # mac loop
-        self.unroll_loop('MAC_loop', mac_op.unroll_matmul, step=2, end=-4)
-
-        # mac tail, no fetch at the same time
-        self.waitcnt(1, 'lgkm')
-        mac_op.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
-        mac_op.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
-        mac_op.pop_mac_instrs(2)
-        self.waitcnt(0, 'lgkm')
-
-        mac_op.pop_mac_instrs(2)
-        self.barrier()
-        self.a.pop_lds_instrs(3)
-        mac_op.pop_mac_instrs()
-        self.a.pop_lds_instrs(5)
-        mac_op.pop_mac_instrs()
-        self.barrier(nl=True)
-
-        self.b.pop_lds_instrs(2)
-        self.waitcnt(1, 'lgkm')
-        mac_op.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
-        mac_op.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
-        mac_op.pop_mac_instrs(2)
-        self.waitcnt(0, 'lgkm')
-        mac_op.pop_mac_instrs(2)
-        mac_op.pop_mac_instrs(2)
-        
-        # all instruction lists should be empty.
-        assert len(self.a.lds_instrs) == len(self.b.lds_instrs) == len(mac_op.mac_instrs) == 0
-
+        mac_op.matmul()
         mac_op.store_C()
 
         return self
@@ -959,9 +869,98 @@ class MACOperator(KernGenerator):
             self.v_mfma(*self.mac_instrs.pop())
         self.empty_line()
 
-    def unroll_matmul(self):
-        lgkmcnt = 0
+    def matmul(self):
+        self.barrier(cmt='wait for A[0] is ready', nl=True)
 
+        self.a.pop_lds_instrs(8)
+
+        self.barrier(cmt='wait for B[0] is ready', nl=True)
+
+        self.b.pop_lds_instrs(2)
+
+        self.waitcnt(1, 'lgkm')
+
+        self.pop_mac_instrs()
+        self.b.pop_lds_instrs(2)
+        self.pop_mac_instrs()
+
+        self.barrier()
+        self.waitcnt(2, 'lgkm')
+        self.pop_mac_instrs(2)
+
+        self.waitcnt(0, 'lgkm')
+
+        self.pop_mac_instrs()
+        self.setprio(0)
+        self.pop_mac_instrs()
+        self.barrier()
+
+        self.a.pop_lds_instrs(3)
+        self.pop_mac_instrs()
+        self.a.pop_lds_instrs(5)
+        self.pop_mac_instrs()
+        self.barrier()
+
+        self.b.pop_lds_instrs(2)
+        self.setprio(1)
+
+        self.waitcnt(1, 'lgkm')
+        self.pop_mac_instrs()
+        self.b.pop_lds_instrs(2)
+        self.barrier()
+        self.pop_mac_instrs()
+        self.waitcnt(2, 'lgkm')
+        self.pop_mac_instrs(2)
+        self.waitcnt(0, 'lgkm')
+
+        self.pop_mac_instrs(2)
+        self.setprio(0)
+        self.barrier()
+        self.a.pop_lds_instrs(3)
+        self.pop_mac_instrs()
+        self.a.pop_lds_instrs(5)
+        self.pop_mac_instrs()
+
+        self.barrier()
+
+        self.b.pop_lds_instrs(2)
+        self.setprio(1)
+
+        # mac loop
+        self.unroll_loop('MAC_loop', self.unroll_matmul, step=2, end=-4)
+
+        # mac tail, no fetch at the same time
+        self.waitcnt(1, 'lgkm')
+        self.pop_mac_instrs()
+        self.b.pop_lds_instrs(2)
+        self.pop_mac_instrs()
+        self.waitcnt(2, 'lgkm')
+        self.pop_mac_instrs(2)
+        self.waitcnt(0, 'lgkm')
+
+        self.pop_mac_instrs(2)
+        self.barrier()
+        self.a.pop_lds_instrs(3)
+        self.pop_mac_instrs()
+        self.a.pop_lds_instrs(5)
+        self.pop_mac_instrs()
+        self.barrier(nl=True)
+
+        self.b.pop_lds_instrs(2)
+        self.waitcnt(1, 'lgkm')
+        self.pop_mac_instrs()
+        self.b.pop_lds_instrs(2)
+        self.pop_mac_instrs()
+        self.waitcnt(2, 'lgkm')
+        self.pop_mac_instrs(2)
+        self.waitcnt(0, 'lgkm')
+        self.pop_mac_instrs(2)
+        self.pop_mac_instrs(2)
+
+        # all instruction lists should be empty.
+        assert len(self.a.lds_instrs) == len(self.b.lds_instrs) == len(self.mac_instrs) == 0
+
+    def unroll_matmul(self):
         # unroll 0
         self.comments('unroll 0', bar=True, nl=True)
         self.waitcnt(1, 'lgkm')
@@ -1041,6 +1040,97 @@ class MACOperator(KernGenerator):
 
 
 class MACOperatorBF16(MACOperator):
+    def matmul(self):
+        self.barrier(cmt='wait for A[0] is ready', nl=True)
+
+        self.a.pop_lds_instrs(8)
+
+        self.barrier(cmt='wait for B[0] is ready', nl=True)
+
+        self.b.pop_lds_instrs(2)
+
+        self.waitcnt(1, 'lgkm')
+
+        self.pop_mac_instrs()
+        self.b.pop_lds_instrs(2)
+        self.pop_mac_instrs()
+
+        self.barrier()
+        self.waitcnt(2, 'lgkm')
+        self.pop_mac_instrs(2)
+
+        self.waitcnt(0, 'lgkm')
+
+        self.pop_mac_instrs()
+        self.setprio(0)
+        self.pop_mac_instrs()
+        self.barrier()
+
+        self.a.pop_lds_instrs(3)
+        self.pop_mac_instrs()
+        self.a.pop_lds_instrs(5)
+        self.pop_mac_instrs()
+        self.barrier()
+
+        self.b.pop_lds_instrs(2)
+        self.setprio(1)
+
+        self.waitcnt(1, 'lgkm')
+        self.pop_mac_instrs()
+        self.b.pop_lds_instrs(2)
+        self.barrier()
+        self.pop_mac_instrs()
+        self.waitcnt(2, 'lgkm')
+        self.pop_mac_instrs(2)
+        self.waitcnt(0, 'lgkm')
+
+        self.pop_mac_instrs(2)
+        self.setprio(0)
+        self.barrier()
+        self.a.pop_lds_instrs(3)
+        self.pop_mac_instrs()
+        self.a.pop_lds_instrs(5)
+        self.pop_mac_instrs()
+
+        self.barrier()
+
+        self.b.pop_lds_instrs(2)
+        self.setprio(1)
+
+        # mac loop
+        self.unroll_loop('MAC_loop', self.unroll_matmul, step=2, end=-4)
+
+        # mac tail, no fetch at the same time
+        self.waitcnt(1, 'lgkm')
+        self.pop_mac_instrs()
+        self.b.pop_lds_instrs(2)
+        self.pop_mac_instrs()
+        self.waitcnt(2, 'lgkm')
+        self.pop_mac_instrs(2)
+        self.waitcnt(0, 'lgkm')
+
+        self.pop_mac_instrs(2)
+        self.barrier()
+        self.a.pop_lds_instrs(3)
+        self.pop_mac_instrs()
+        self.a.pop_lds_instrs(5)
+        self.pop_mac_instrs()
+        self.barrier(nl=True)
+
+        self.b.pop_lds_instrs(2)
+        self.waitcnt(1, 'lgkm')
+        self.pop_mac_instrs()
+        self.b.pop_lds_instrs(2)
+        self.pop_mac_instrs()
+        self.waitcnt(2, 'lgkm')
+        self.pop_mac_instrs(2)
+        self.waitcnt(0, 'lgkm')
+        self.pop_mac_instrs(2)
+        self.pop_mac_instrs(2)
+
+        # all instruction lists should be empty.
+        assert len(self.a.lds_instrs) == len(self.b.lds_instrs) == len(self.mac_instrs) == 0
+
     def merge_bf16(self, i):
         a = i * 2
         b = a + 1
@@ -1049,21 +1139,20 @@ class MACOperatorBF16(MACOperator):
                 (self.tmp_regs, 1), (self.c.regs, a))
 
     def pop_store_instrs(self, cnt=1):
-        for i in range(cnt):
-            a, offset, dw = self.store_instrs.pop()
-            self.merge_bf16(a)
-            b, _, _ = self.store_instrs.pop()
-            self.merge_bf16(b)
-            self.buffer_store((self.c.regs, a), self.c.g_w_addr,
+        for _ in range(cnt):
+            acc_reg_offset, i, offset, dw = self.store_instrs.pop()
+            self.c.read_acc_regs(dw * 2, dest=i * dw, offset=acc_reg_offset)
+            self.merge_bf16(i)
+            self.merge_bf16(i + 1)
+            self.buffer_store((self.c.regs, i), self.c.g_w_addr,
                     self.c.srd, dw, offset=offset)
-            self.empty_line()
 
     def store_C(self):
-        super().store_C()
         self.write_line('s_mov_b32     s84, roundMaskVal')
         self.write_line('v_xor_b32     v[vgprTmp+1], v[vgprTmp],v[vgprTmp]')
         self.write_line('v_or_b32      v[vgprTmp+1], s84, v[vgprTmp+1]')
         self.empty_line
+        super().store_C()
 
 
 if __name__ == "__main__":

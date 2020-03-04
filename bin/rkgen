@@ -55,7 +55,7 @@ def listify(d):
     return [d]
 
 
-def get_mfma_instr_config(s:str):
+def get_mfma_info(s:str):
     d_regs_len, a_regs_len, b_regs_len = 16, 2, 2
     if s == '32x32x8f16':
         d_regs_len, a_regs_len, b_regs_len = 16, 2, 2
@@ -188,7 +188,7 @@ class Sp3Writer():
     def v_lshr_or(self, dest, src0, src1, src2, dtype='b32', **kwargs):
         self.v_lsh_or(dest, src0, src1, src2, dtype=dtype, ldir=False, **kwargs)
 
-    def v_and_or(self, dest, src0, src1, src2, dtype, **kwargs):
+    def v_and_or(self, dest, src0, src1, src2, dtype='b32', **kwargs):
         self.vop3_instr('and_or', dtype, dest, src0, src1, src2, **kwargs)
 
     def v_mov(self, dest, src, dtype='b32', **kwargs):
@@ -331,7 +331,9 @@ class KernGenerator(Sp3Writer):
         self.mac_unroll_cnt = self.depthU // self.mfma_k
         if self.MT0 == 64 and self.MT1 == 128:
             self.mfma_blocks0, self.mfma_blocks1 = 2, 1
-        self.mfma_reg_len = get_mfma_instr_config(getattr(self, 'general')['mfma'])
+        self.mfma_reg_len = get_mfma_info(getattr(self, 'general')['mfma'])
+        self.mfma_lane_len = 8
+        self.mfma_instr = 'f32_' + getattr(self, 'general')['mfma']
 
     def load_karg(self, var, dw=1):
         self.s_load(var, self.karg_addr, getattr(self, 'kargs')[var], dw=dw)
@@ -786,7 +788,7 @@ class Tensor(KernGenerator):
             for i in range(self.mac_unroll_cnt):
                 for j in range(self.mfma_blocks):
                     self.lds_instrs.append((
-                        (self.regs, k * lane_len + j * self.mfma_k + i * self.lds_read_dw),
+                        (self.regs, k * lane_len + j * self.mfma_lane_len + i * self.lds_read_dw),
                         (self.l_r_addr0, k),
                         '%s%d' % ('%d * %s + ' % (j, subgrp_offset) if j else '', offset),
                         dw_str(self.lds_read_dw)))
@@ -839,8 +841,8 @@ class MACOperator(KernGenerator):
         self.store_instrs *= self.mfma_blocks1
 
     def push_mac_instrs(self):
-        lane_len0 = self.mfma_k * self.mfma_blocks0
-        lane_len1 = self.mfma_k * self.mfma_blocks1
+        lane_len0 = self.mfma_lane_len * self.mfma_blocks0
+        lane_len1 = self.mfma_lane_len * self.mfma_blocks1
         assert self.mfma_reg_len[2] == self.mfma_reg_len[3]
         rw_len = 64 // self.mfma_block0 * self.mfma_reg_len[2] * 4
         self.mac_instrs = []
@@ -851,9 +853,9 @@ class MACOperator(KernGenerator):
                 for l in range(self.mfma_blocks1):
                     for j in range(self.mfma_blocks0):
                         self.mac_instrs.append(((self.acc_regs, blk_off),
-                            (self.a.regs, k * lane_len0 + j * self.mfma_k + i * a_off),
-                            (self.b.regs, k * lane_len1 + l * self.mfma_k + i * b_off),
-                            (self.acc_regs, blk_off)))
+                            (self.a.regs, k * lane_len0 + j * self.mfma_lane_len + i * a_off),
+                            (self.b.regs, k * lane_len1 + l * self.mfma_lane_len + i * b_off),
+                            (self.acc_regs, blk_off), self.mfma_instr))
                         blk_off += d_off
         self.mac_instrs.reverse() # for pop
         self._mac_instrs = copy.copy(self.mac_instrs)
@@ -958,6 +960,7 @@ class MACOperator(KernGenerator):
         self.pop_mac_instrs(2)
 
         # all instruction lists should be empty.
+        # pdb.set_trace()
         assert len(self.a.lds_instrs) == len(self.b.lds_instrs) == len(self.mac_instrs) == 0
 
     def unroll_matmul(self):
@@ -1043,93 +1046,160 @@ class MACOperatorBF16(MACOperator):
     def matmul(self):
         self.barrier(cmt='wait for A[0] is ready', nl=True)
 
-        self.a.pop_lds_instrs(8)
+        self.a.pop_lds_instrs(16)
 
         self.barrier(cmt='wait for B[0] is ready', nl=True)
 
-        self.b.pop_lds_instrs(2)
+        self.b.pop_lds_instrs(4)
 
-        self.waitcnt(1, 'lgkm')
+        self.waitcnt(3, 'lgkm')
 
         self.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
+        self.b.pop_lds_instrs(4)
         self.pop_mac_instrs()
 
         self.barrier()
-        self.waitcnt(2, 'lgkm')
+        self.waitcnt(6, 'lgkm')
         self.pop_mac_instrs(2)
-
+        self.waitcnt(5, 'lgkm')
+        self.pop_mac_instrs(2)
+        self.waitcnt(4, 'lgkm')
+        self.pop_mac_instrs(2)
         self.waitcnt(0, 'lgkm')
-
-        self.pop_mac_instrs()
+        self.pop_mac_instrs(2)
         self.setprio(0)
         self.pop_mac_instrs()
         self.barrier()
-
-        self.a.pop_lds_instrs(3)
+        self.a.pop_lds_instrs(2)
+        self.pop_mac_instrs()
+        self.a.pop_lds_instrs(4)
+        self.pop_mac_instrs()
+        self.a.pop_lds_instrs(5)
         self.pop_mac_instrs()
         self.a.pop_lds_instrs(5)
         self.pop_mac_instrs()
         self.barrier()
 
         self.b.pop_lds_instrs(2)
+        self.pop_mac_instrs()
+        self.b.pop_lds_instrs(4)
         self.setprio(1)
 
-        self.waitcnt(1, 'lgkm')
+        self.waitcnt(5, 'lgkm')
         self.pop_mac_instrs()
         self.b.pop_lds_instrs(2)
-        self.barrier()
         self.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
+        self.barrier()
+        self.waitcnt(6, 'lgkm')
+        self.pop_mac_instrs(2)
+        self.waitcnt(5, 'lgkm')
+        self.pop_mac_instrs(2)
+        self.waitcnt(4, 'lgkm')
         self.pop_mac_instrs(2)
         self.waitcnt(0, 'lgkm')
 
         self.pop_mac_instrs(2)
         self.setprio(0)
+        self.pop_mac_instrs()
         self.barrier()
-        self.a.pop_lds_instrs(3)
+        self.a.pop_lds_instrs(2)
         self.pop_mac_instrs()
         self.a.pop_lds_instrs(5)
         self.pop_mac_instrs()
-
+        self.a.pop_lds_instrs(4)
+        self.pop_mac_instrs()
+        self.a.pop_lds_instrs(5)
+        self.pop_mac_instrs()
         self.barrier()
 
         self.b.pop_lds_instrs(2)
+        self.pop_mac_instrs()
+        self.b.pop_lds_instrs(4)
         self.setprio(1)
+        self.empty_line()
 
         # mac loop
         self.unroll_loop('MAC_loop', self.unroll_matmul, step=2, end=-4)
 
         # mac tail, no fetch at the same time
-        self.waitcnt(1, 'lgkm')
+        self.waitcnt(5, 'lgkm')
         self.pop_mac_instrs()
         self.b.pop_lds_instrs(2)
         self.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
+        self.waitcnt(6, 'lgkm')
+        self.pop_mac_instrs(2)
+        self.waitcnt(5, 'lgkm')
+        self.pop_mac_instrs(2)
+        self.waitcnt(4, 'lgkm')
         self.pop_mac_instrs(2)
         self.waitcnt(0, 'lgkm')
-
-        self.pop_mac_instrs(2)
+        self.pop_mac_instrs(3)
         self.barrier()
-        self.a.pop_lds_instrs(3)
+        self.a.pop_lds_instrs(2)
+        self.pop_mac_instrs()
+        self.a.pop_lds_instrs(4)
         self.pop_mac_instrs()
         self.a.pop_lds_instrs(5)
         self.pop_mac_instrs()
-        self.barrier(nl=True)
+        self.a.pop_lds_instrs(5)
+        self.pop_mac_instrs()
+        self.barrier()
+        self.b.pop_lds_instrs(2)
+        self.pop_mac_instrs()
+        self.b.pop_lds_instrs(4)
+        self.empty_line()
 
-        self.b.pop_lds_instrs(2)
-        self.waitcnt(1, 'lgkm')
+        self.waitcnt(5, 'lgkm')
+
         self.pop_mac_instrs()
         self.b.pop_lds_instrs(2)
         self.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
+        self.waitcnt(6, 'lgkm')
+        self.pop_mac_instrs(2)
+        self.waitcnt(5, 'lgkm')
+        self.pop_mac_instrs(2)
+        self.waitcnt(4, 'lgkm')
         self.pop_mac_instrs(2)
         self.waitcnt(0, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.pop_mac_instrs(2)
+        while len(self.mac_instrs):
+            self.pop_mac_instrs()
+        self.empty_line
 
         # all instruction lists should be empty.
+        # pdb.set_trace()
         assert len(self.a.lds_instrs) == len(self.b.lds_instrs) == len(self.mac_instrs) == 0
+
+    def unroll_matmul(self):
+        for _ in range(2):
+            self.waitcnt(5, 'lgkm')
+            self.pop_mac_instrs()
+            self.b.pop_lds_instrs(2)
+            self.barrier()
+            self.waitcnt(6, 'lgkm')
+            self.pop_mac_instrs(2)
+            self.waitcnt(5, 'lgkm')
+            self.pop_mac_instrs(2)
+            self.waitcnt(4, 'lgkm')
+            self.pop_mac_instrs(2)
+            self.waitcnt(0, 'lgkm')
+            self.pop_mac_instrs(2)
+            self.setprio(0)
+            self.pop_mac_instrs()
+            self.barrier()
+            self.a.pop_lds_instrs(2)
+            self.pop_mac_instrs()
+            self.a.pop_lds_instrs(4)
+            self.pop_mac_instrs()
+            self.a.pop_lds_instrs(5)
+            self.pop_mac_instrs()
+            self.a.pop_lds_instrs(5)
+            self.pop_mac_instrs()
+            self.barrier()
+            self.b.pop_lds_instrs(2)
+            self.pop_mac_instrs()
+            self.b.pop_lds_instrs(4)
+            self.setprio(1)
+            self.empty_line()
 
     def merge_bf16(self, i):
         a = i * 2

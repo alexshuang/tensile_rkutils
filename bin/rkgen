@@ -890,7 +890,7 @@ class Tensor(KernGenerator):
         if auto_fill:
             if len(self.lds_instrs) == 0 or len(self.lds_instrs) < cnt:
                 self.lds_instrs = copy.copy(self._lds_instrs) + self.lds_instrs
-                self.barrier(nl=True, cmt='%s is ready' % self.mat)
+                #self.barrier(nl=True, cmt='%s is ready' % self.mat)
         else:
             cnt = min(cnt, len(self.lds_instrs))
         for i in range(cnt):

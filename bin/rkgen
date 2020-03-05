@@ -861,50 +861,67 @@ class MACOperator(KernGenerator):
         for i in range(cnt):
             self.v_mfma(*self.mac_instrs.pop())
 
+    def calc_interleave_info(self):
+        self.num_instrs_A = len(self.a.lds_instrs) // 2 # pingpang / 2 == ping or pang
+        self.num_instrs_B = len(self.b.lds_instrs) // 2 # pingpang / 2 == ping or pang
+        self.num_mac_instrs = len(self.mac_instrs) // 2
+        #pdb.set_trace()
+        assert self.num_instrs_A % 4 == 0 and self.num_instrs_B % 4 == 0
+        self.num_instrs_once_A = 4 if self.num_instrs_A > 4 else 2
+        self.num_instrs_once_B = 4 if self.num_instrs_B > 4 else 2
+        self.num_interleave_instrs_A = self.num_instrs_A // self.num_instrs_once_A
+        self.num_interleave_instrs_B = self.num_instrs_B // self.num_instrs_once_B
+        self.num_remain_instrs = self.num_mac_instrs - self.num_interleave_instrs_A - self.num_interleave_instrs_B
+
+    def read_A(self, interleave=True):
+        if interleave: self.waitcnt(0, 'lgkm')
+        for _ in range(0, self.num_instrs_A, self.num_instrs_once_A):
+            if interleave: self.pop_mac_instrs() # no need wait_lgkmcnt
+            self.a.pop_lds_instrs(self.num_instrs_once_A)
+        self.empty_line()
+
+    def read_B(self):
+        n = 0
+        for i, _ in enumerate(range(0, self.num_instrs_B, self.num_instrs_once_B)):
+            self.b.pop_lds_instrs(self.num_instrs_once_B)
+            n += self.num_instrs_once_B - 1
+            if i % 2 == 0: self.waitcnt(n, 'lgkm')
+            self.pop_mac_instrs()
+        self.empty_line()
+
+    def do_math(self):
+        n = self.num_remain_instrs // 2
+        for i in range(0, self.num_remain_instrs, 2):
+            self.waitcnt(n, 'lgkm')
+            self.pop_mac_instrs(2)
+            n -= 1
+        self.empty_line()
+
     def matmul(self):
         # head
         # a: 16, b: 8, mfma: 16
+        self.calc_interleave_info()
+
         self.barrier(cmt='A[0] is ready', nl=True)
-        self.a.pop_lds_instrs(8)
+        self.read_A(False)
 
         self.barrier(cmt='B[0] is ready', nl=True)
-        self.b.pop_lds_instrs(2)
-        self.waitcnt(1, 'lgkm')
-        self.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
-        self.pop_mac_instrs()
+        self.read_B()
 
         self.barrier(cmt='wait for update A[0] & B[0]', nl=True)
-        self.waitcnt(2, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.waitcnt(1, 'lgkm')
-        self.pop_mac_instrs(2)
+        self.do_math()
 
         self.barrier(cmt='A[1] is ready', nl=True)
-        self.pop_mac_instrs()
-        self.a.pop_lds_instrs(4)
-        self.pop_mac_instrs()
-        self.a.pop_lds_instrs(4)
+        self.read_A()
 
         self.barrier(cmt='B[1] is ready', nl=True)
-        self.b.pop_lds_instrs(2)
-        self.waitcnt(1, 'lgkm')
-        self.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
+        self.read_B()
 
         self.barrier(cmt='wait for update A[1] & B[1]', nl=True)
-        self.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.waitcnt(1, 'lgkm')
-        self.pop_mac_instrs(2)
+        self.do_math()
 
         self.barrier(cmt='A[0] is ready', nl=True)
-        self.waitcnt(0, 'lgkm')
-        self.pop_mac_instrs()
-        self.a.pop_lds_instrs(4)
-        self.pop_mac_instrs()
-        self.a.pop_lds_instrs(4)
+        self.read_A()
 
         self.barrier(cmt='B[0] is ready', nl=True)
         self.b.pop_lds_instrs(2)
@@ -918,29 +935,18 @@ class MACOperator(KernGenerator):
         self.b.pop_lds_instrs(2)
         self.pop_mac_instrs()
 
-        self.waitcnt(2, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.waitcnt(1, 'lgkm')
-        self.pop_mac_instrs(2)
+        self.do_math()
 
         self.barrier(cmt='A[1] is ready', nl=True)
-        self.waitcnt(0, 'lgkm')
-        self.a.pop_lds_instrs(4)
-        self.pop_mac_instrs()
-        self.a.pop_lds_instrs(4)
-        self.pop_mac_instrs()
+        self.read_A()
 
         self.barrier(cmt='B[1] is ready', nl=True)
-        self.b.pop_lds_instrs(2)
-        self.waitcnt(1, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.b.pop_lds_instrs(2)
-        self.waitcnt(2, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.waitcnt(1, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.waitcnt(0, 'lgkm')
-        self.pop_mac_instrs(2)
+        self.read_B()
+
+        self.do_math()
+
+        while (len(self.mac_instrs)):
+            self.pop_mac_instrs()
 
         # all instruction lists should be empty.
         # pdb.set_trace()
@@ -956,19 +962,12 @@ class MACOperator(KernGenerator):
             self.pop_mac_instrs()
 
             self.barrier(cmt='wait for update A[%d] & B[%d]' % (i, i), nl=True)
-            self.waitcnt(2, 'lgkm')
-            self.pop_mac_instrs(2)
-            self.waitcnt(1, 'lgkm')
-            self.pop_mac_instrs(2)
+            self.do_math()
 
             self.barrier(cmt='A[%d] is ready' % (1 if i == 0 else 0), nl=True)
-            self.waitcnt(0, 'lgkm')
-            self.a.pop_lds_instrs(4)
-            self.pop_mac_instrs()
-            self.a.pop_lds_instrs(4)
+            self.read_A()
 
             self.barrier(cmt='B[%d] is ready' % (1 if i == 0 else 0), nl=True)
-            self.pop_mac_instrs()
             self.b.pop_lds_instrs(2)
 
     def merge_fp32(self, i):

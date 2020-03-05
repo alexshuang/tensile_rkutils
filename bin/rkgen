@@ -528,7 +528,9 @@ class KernGenerator(Sp3Writer):
         self.empty_line()
 
         self.a.local_mem_addressing()
-        self.barrier(nl=True)
+
+        self.barrier(cmt='sync up for fetch A[0]', nl=True)
+
         self.b.local_mem_addressing()
         
         self.waitcnt(0, 'lgkm', cmt='wait for kernel variables ready', nl=True)
@@ -556,6 +558,7 @@ class Tensor(KernGenerator):
         super().__init__(conf, fp)
         self.set_var_alias(mat)
         self.pingpang = 0
+        self.pop_instrs_cnt = 0
 
     def set_var_alias(self, mat):
         setattr(self, 'g2l', 'vgprG2L' + mat)
@@ -794,7 +797,7 @@ class Tensor(KernGenerator):
             cnt = min(cnt, len(self.lds_instrs))
         for i in range(cnt):
             self.ds_read(*self.lds_instrs.pop())
-        self.empty_line()
+        self.pop_instrs_cnt += cnt
 
     def read_acc_regs(self, cnt, dest=0, offset=0):
         cb = partial(self.v_accvgpr, (self.regs, 'i'),
@@ -849,7 +852,7 @@ class MACOperator(KernGenerator):
         self._mac_instrs = copy.copy(self.mac_instrs)
         return 2 * self.mac_unroll_cnt * self.mfma_blocks0 * self.mfma_blocks1
 
-    def pop_mac_instrs(self, cnt=1, auto_fill=True):
+    def pop_mac_instrs(self, cnt=1, auto_fill=True, wait_for_instrs=True):
         if auto_fill:
             if len(self.mac_instrs) == 0 or len(self.mac_instrs) < cnt:
                 self.mac_instrs = copy.copy(self._mac_instrs) + self.mac_instrs
@@ -857,150 +860,77 @@ class MACOperator(KernGenerator):
             cnt = min(len(self.mac_instrs), cnt)
         for i in range(cnt):
             self.v_mfma(*self.mac_instrs.pop())
-        self.empty_line()
 
     def matmul(self):
-        self.barrier(cmt='wait for A[0] is ready', nl=True)
+        # head
+        # a: 16, b: 8, mfma: 16
+        self.barrier(cmt='A[0] is ready', nl=True)
+        self.a.pop_lds_instrs(16)
 
-        self.a.pop_lds_instrs(8)
-
-        self.barrier(cmt='wait for B[0] is ready', nl=True)
-
-        self.b.pop_lds_instrs(2)
-
-        self.waitcnt(1, 'lgkm')
-
+        self.barrier(cmt='B[0] is ready', nl=True)
+        self.b.pop_lds_instrs(4)
+        self.waitcnt(3, 'lgkm')
         self.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
+        self.b.pop_lds_instrs(4)
         self.pop_mac_instrs()
 
-        self.barrier()
-        self.waitcnt(2, 'lgkm')
-        self.pop_mac_instrs(2)
+        self.barrier(cmt='wait for update A[0] & B[0]', nl=True)
+        for i in range(len(self.mac_instrs) // 2):
+            self.waitcnt(6 - i, 'lgkm')
+            self.pop_mac_instrs(2)
 
-        self.waitcnt(0, 'lgkm')
+        self.barrier(cmt='A[1] is ready', nl=True)
+        self.a.pop_lds_instrs(16)
 
-        self.pop_mac_instrs()
-        self.setprio(0)
-        self.pop_mac_instrs()
-        self.barrier()
+        self.barrier(cmt='B[1] is ready', nl=True)
+        self.b.pop_lds_instrs(4)
 
-        self.a.pop_lds_instrs(3)
-        self.pop_mac_instrs()
-        self.a.pop_lds_instrs(5)
-        self.pop_mac_instrs()
-        self.barrier()
-
-        self.b.pop_lds_instrs(2)
-        self.setprio(1)
-
-        self.waitcnt(1, 'lgkm')
-        self.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
-        self.barrier()
-        self.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.waitcnt(0, 'lgkm')
-
-        self.pop_mac_instrs(2)
-        self.setprio(0)
-        self.barrier()
-        self.a.pop_lds_instrs(3)
-        self.pop_mac_instrs()
-        self.a.pop_lds_instrs(5)
-        self.pop_mac_instrs()
-
-        self.barrier()
-
-        self.b.pop_lds_instrs(2)
-        self.setprio(1)
-
-        # mac loop
+        # loop
         self.unroll_loop('MAC_loop', self.unroll_matmul, step=2, end=-4)
 
-        # mac tail, no fetch at the same time
-        self.waitcnt(1, 'lgkm')
+        # tail, 2 barrier needed
+        self.waitcnt(3, 'lgkm')
         self.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
+        self.b.pop_lds_instrs(4)
         self.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.waitcnt(0, 'lgkm')
 
-        self.pop_mac_instrs(2)
-        self.barrier()
-        self.a.pop_lds_instrs(3)
-        self.pop_mac_instrs()
-        self.a.pop_lds_instrs(5)
-        self.pop_mac_instrs()
-        self.barrier(nl=True)
+        for i in range(len(self.mac_instrs) // 2):
+            self.waitcnt(6 - i, 'lgkm')
+            self.pop_mac_instrs(2)
 
-        self.b.pop_lds_instrs(2)
-        self.waitcnt(1, 'lgkm')
-        self.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
-        self.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.waitcnt(0, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.pop_mac_instrs(2)
+        self.barrier(cmt='A[1] is ready', nl=True)
+        self.a.pop_lds_instrs(16)
+
+        self.barrier(cmt='B[1] is ready', nl=True)
+        self.b.pop_lds_instrs(8)
+
+        for i in range(len(self.mac_instrs) // 2):
+            self.waitcnt(7 - i, 'lgkm')
+            self.pop_mac_instrs(2)
 
         # all instruction lists should be empty.
         # pdb.set_trace()
         assert len(self.a.lds_instrs) == len(self.b.lds_instrs) == len(self.mac_instrs) == 0
 
     def unroll_matmul(self):
-        # unroll 0
-        self.comments('unroll 0', bar=True, nl=True)
-        self.waitcnt(1, 'lgkm')
-        self.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
-        self.barrier()
-        self.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.waitcnt(0, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.setprio(0)
-        self.barrier(cmt='A[1] is ready')
-        self.empty_line()
+        for i in range(2):
+            self.comments('unroll loop %d' % i, bar=True, nl=True)
 
-        self.a.pop_lds_instrs(4)
-        self.pop_mac_instrs()
-        self.a.pop_lds_instrs(4)
-        self.pop_mac_instrs()
-        self.barrier(cmt='B[1] is ready')
-        self.empty_line()
+            self.waitcnt(3, 'lgkm')
+            self.pop_mac_instrs()
+            self.b.pop_lds_instrs(4)
+            self.pop_mac_instrs()
 
-        self.b.pop_lds_instrs(2)
-        self.setprio(1)
+            self.barrier(cmt='wait for update A[%d] & B[%d]' % (i, i), nl=True)
+            for i in range(len(self.mac_instrs) // 2):
+                self.waitcnt(6 - i, 'lgkm')
+                self.pop_mac_instrs(2)
 
-        # unroll 1
-        self.comments('unroll 1', bar=True, nl=True)
-        self.waitcnt(1, 'lgkm')
-        self.pop_mac_instrs()
-        self.b.pop_lds_instrs(2)
-        self.barrier()
-        self.pop_mac_instrs()
-        self.waitcnt(2, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.waitcnt(0, 'lgkm')
-        self.pop_mac_instrs(2)
-        self.setprio(0)
-        self.barrier(cmt='A[0] is ready')
-        self.empty_line()
+            self.barrier(cmt='A[%d] is ready' % (1 if i == 0 else 0), nl=True)
+            self.a.pop_lds_instrs(16)
 
-        self.a.pop_lds_instrs(4)
-        self.pop_mac_instrs()
-        self.a.pop_lds_instrs(4)
-        self.pop_mac_instrs()
-        self.barrier(cmt='B[0] is ready')
-        self.empty_line()
-
-        self.b.pop_lds_instrs(2)
-        self.setprio(1)
+            self.barrier(cmt='B[%d] is ready' % (1 if i == 0 else 0), nl=True)
+            self.b.pop_lds_instrs(4)
 
     def merge_fp32(self, i):
         a = i * 2

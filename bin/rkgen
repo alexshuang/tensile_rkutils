@@ -894,6 +894,7 @@ class MACOperator(KernGenerator):
         self.b.pop_lds_instrs(4)
         self.pop_mac_instrs()
 
+        self.barrier(cmt='update A[0] & B[0]', nl=True)
         for i in range(len(self.mac_instrs) // 2):
             self.waitcnt(6 - i, 'lgkm')
             self.pop_mac_instrs(2)

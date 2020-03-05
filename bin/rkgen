@@ -449,27 +449,15 @@ class KernGenerator(Sp3Writer):
         self.empty_line()
 
     def unroll_fetch(self, cnt=0):
-        a, b = self.a, self.b
-        self.barrier(cmt='sync up for ping', nl=True)
-
-        self.comments('unroll loop0: A[0] & B[0]', nl=True)
-        cnt += a.fetch()
-        cnt += b.fetch()
-        cnt = a.wait4fetch(cnt)
-        a.update_fetch_addr(prio=1)
-        cnt = b.wait4fetch(cnt)
-        b.update_fetch_addr(prio=1)
-
-        self.barrier(cmt='sync up for pang', nl=True)
-
-        self.comments('unroll loop1: A[1] & B[1]', nl=True)
-        cnt += a.fetch()
-        cnt += b.fetch()
-        cnt = a.wait4fetch(cnt)
-        a.update_fetch_addr(prio=1)
-        cnt = b.wait4fetch(cnt)
-        b.update_fetch_addr(prio=1)
-        self.empty_line()
+        for i in range(2): # ping pang
+            self.comments('unroll loop %d' % i, bar=True, nl=True)
+            self.barrier(cmt='wait for update A[%d] & B[%d]' % (i, i), nl=True)
+            cnt += self.a.fetch()
+            cnt += self.b.fetch()
+            cnt = self.a.wait4fetch(cnt)
+            self.a.update_fetch_addr(prio=1)
+            cnt = self.b.wait4fetch(cnt)
+            self.b.update_fetch_addr(prio=1)
 
     def fetch_phase(self):
         self.load_karg('sgprAddressA', 4) # load both A&B
@@ -497,34 +485,32 @@ class KernGenerator(Sp3Writer):
         b.global_mem_addressing()
 
         self.comments('Global Fetch A & B', bar=True, nl=True)
-        self.barrier(cmt='sync up for global fetch')
+        self.barrier(cmt='sync up for beginning')
         self.empty_line()
 
-        # prefetch to LDS with pingpang
-        # A[0], B[0]
+        # ping
         cnt = a.fetch()
         cnt += b.fetch()
         a.update_fetch_addr()
         b.update_fetch_addr()
 
-        # A[1], B[1]
+        # pang
         cnt += a.fetch()
         cnt += b.fetch()
         a.update_fetch_addr()
         b.update_fetch_addr()
 
-        # wait for A[0], B[0] ready
+        # wait for A & B ready
         cnt = a.wait4fetch(cnt)
         cnt = b.wait4fetch(cnt)
 
-        # fetch by pingpang
+        # unroll loop
         self.unroll_loop('fetch_loop', partial(self.unroll_fetch, cnt), k=self.depthU, end=-2, step=2)
 
-        # finish the last A&B
         self.waitcnt(8, 'vm')
-        self.barrier()
+        self.barrier(cmt='A[1] is ready')
         self.waitcnt(0, 'vm')
-        self.barrier()
+        self.barrier(cmt='B[1] is ready')
         self.end_pgm()
         self.empty_line()
         self.empty_line()
@@ -569,6 +555,7 @@ class Tensor(KernGenerator):
     def __init__(self, conf:dict, fp, mat:str):
         super().__init__(conf, fp)
         self.set_var_alias(mat)
+        self.pingpang = 0
 
     def set_var_alias(self, mat):
         setattr(self, 'g2l', 'vgprG2L' + mat)
@@ -773,7 +760,8 @@ class Tensor(KernGenerator):
         #self.waitcnt(20 if self.mat == 'A' else 12, 'vm')
         res_cnt = max(res_cnt - self.vmcnt, 0)
         self.waitcnt(res_cnt, 'vm')
-        self.barrier(cmt='wait for LDS %s' % self.mat) 
+        self.barrier(cmt='%s[%d] ready' % (self.mat, self.pingpang))
+        self.pingpang = 1 if self.pingpang == 0 else 0
         self.empty_line()
         return res_cnt
 

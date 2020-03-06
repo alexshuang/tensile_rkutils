@@ -997,6 +997,12 @@ class MACOperator(KernGenerator):
         for i in sorted(instrs.keys(), reverse=True):
             self.mfma_instrs += instrs[i]
 
+    def get_next_mfma_instr_blk(self):
+        return self.mfma_instrs[-1][0][1]
+
+    def get_next_store_instr_blk(self):
+        return self.store_instrs[-1][0]
+
     def store_C(self):
         n = len(self.store_instrs) // self.num_mfma_blocks
         block_offset = self.mfma_reg_len[0] * 4
@@ -1016,6 +1022,11 @@ class MACOperator(KernGenerator):
                         offset=i * block_offset + j * self.store_dw * 4 * 2)
             self.pop_mfma_instrs(auto_fill=False)
             self.empty_line()
+
+            blk = self.get_next_store_instr_blk()
+            while self.get_next_mfma_instr_blk() <= blk:
+                self.pop_mfma_instrs(auto_fill=False)
+                self.empty_line()
 
             self.waitcnt(4 - 1, 'vm')
             self.pop_store_instrs(num_store_instrs)

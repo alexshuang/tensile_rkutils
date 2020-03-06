@@ -71,6 +71,8 @@
     "vgpr": {
         "vgprValuC": 0,
         "vgprAcc": 0,
+        "vgprValuC1": 16,
+        "vgprValuC2": 24,
         "vgprValuA_X0_I0": 32,
         "vgprValuA_X0_I1": 48,
         "vgprG2LA": 48,

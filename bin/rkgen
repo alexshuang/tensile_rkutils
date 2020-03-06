@@ -1029,7 +1029,7 @@ class MACOperator(KernGenerator):
 
         for i in range(self.num_mfma_blocks):
             self.pop_mfma_instrs(auto_fill=False)
-            load_instr_cnt += self.pop_load_instrs(4)
+            load_instr_cnt = self.pop_load_instrs(4)
             self.pop_mfma_instrs(auto_fill=False)
             self.empty_line()
 
@@ -1039,7 +1039,8 @@ class MACOperator(KernGenerator):
                     self.pop_mfma_instrs(auto_fill=False)
                     self.empty_line()
 
-            self.waitcnt(--load_instr_cnt, 'vm')
+            if load_instr_cnt > 0:
+                self.waitcnt(load_instr_cnt - 1, 'vm')
             self.pop_store_instrs(num_store_instrs)
 
 

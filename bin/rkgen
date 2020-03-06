@@ -1023,10 +1023,11 @@ class MACOperator(KernGenerator):
             self.pop_mfma_instrs(auto_fill=False)
             self.empty_line()
 
-            blk = self.get_next_store_instr_blk()
-            while self.get_next_mfma_instr_blk() <= blk:
-                self.pop_mfma_instrs(auto_fill=False)
-                self.empty_line()
+            if len(self.mfma_instrs) > 0:
+                blk = self.get_next_store_instr_blk()
+                while self.get_next_mfma_instr_blk() <= blk:
+                    self.pop_mfma_instrs(auto_fill=False)
+                    self.empty_line()
 
             self.waitcnt(4 - 1, 'vm')
             self.pop_store_instrs(num_store_instrs)

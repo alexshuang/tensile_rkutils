@@ -873,10 +873,6 @@ class MACOperator(KernGenerator):
         self.num_remain_instrs = self.num_mfma_instrs - self.num_interleave_instrs_A - self.num_interleave_instrs_B
         self.num_store_instrs_one_block = len(self.store_instrs)
 
-
-
-
-
     def read_A(self, interleave=True):
         if interleave: self.waitcnt(0, 'lgkm')
         for _ in range(0, self.num_instrs_A, self.num_instrs_once_A):
@@ -950,6 +946,7 @@ class MACOperator(KernGenerator):
         self.store_C()
 
         # all instruction lists should be empty.
+        # pdb.set_trace()
         assert len(self.a.lds_instrs) == len(self.b.lds_instrs) == len(self.mfma_instrs) == len(self.store_instrs) == 0
 
     def unroll_matmul(self):
@@ -982,10 +979,14 @@ class MACOperator(KernGenerator):
         for _ in range(cnt):
             acc_reg_offset, i, offset, dw = self.store_instrs.pop()
             self.c.read_acc_regs(dw * 2, dest=i * dw, offset=acc_reg_offset)
+            self.empty_line()
             self.merge_fp32(i)
             self.merge_fp32(i + 1)
+            self.empty_line()
             self.buffer_store((self.c.regs, i), self.c.g_w_addr,
                     self.c.srd, dw, offset=offset)
+            self.empty_line()
+            self.pop_mfma_instrs(auto_fill=False)
 
     def reorder_mfma_instrs(self):
         # reorder mfma instrs by block number, reverse=True
@@ -997,20 +998,27 @@ class MACOperator(KernGenerator):
             self.mfma_instrs += instrs[i]
 
     def store_C(self):
-        self.comments('Store C', bar=True, nl=True)
+        n = len(self.store_instrs) // self.num_mfma_blocks
+        block_offset = self.mfma_reg_len[0] * 4
+        num_store_instrs = len(self.store_instrs) // self.num_mfma_blocks
+
         # reorder mfma instrs by block number
         self.reorder_mfma_instrs()
-        self.waitcnt(0, 'lgkm')
-        self.pop_mfma_instrs(1000, auto_fill=False)
 
-        while len(self.store_instrs):
-            '''
-            if (len(self.mfma_instrs)):
-                self.pop_mfma_instrs()
-                self.empty_line()
-            '''
-            self.pop_store_instrs()
+        self.comments('Store C', bar=True, nl=True)
+        self.waitcnt(0, 'lgkm')
+
+        for i in range(self.num_mfma_blocks):
+            self.pop_mfma_instrs(auto_fill=False)
+            for j in range(4):
+                self.buffer_load((self.src_C, j * self.store_dw),
+                        self.c.g_w_addr, self.c.srd, self.store_dw,
+                        offset=i * block_offset + j * self.store_dw * 4 * 2)
+            self.pop_mfma_instrs(auto_fill=False)
             self.empty_line()
+
+            self.waitcnt(4 - 1, 'vm')
+            self.pop_store_instrs(num_store_instrs)
 
 
 class MACOperatorBF16(MACOperator):
@@ -1183,10 +1191,12 @@ class MACOperatorBF16(MACOperator):
         for _ in range(cnt):
             acc_reg_offset, i, offset, dw = self.store_instrs.pop()
             self.c.read_acc_regs(dw * 2, dest=i * dw, offset=acc_reg_offset)
+            self.empty_line()
             self.merge_bf16(i)
             self.merge_bf16(i + 1)
-            self.buffer_store((self.c.regs, i), self.c.g_w_addr,
-                    self.c.srd, dw, offset=offset)
+            self.buffer_store((self.c.regs, i), self.c.g_w_addr, self.c.srd, dw, offset=offset)
+            self.empty_line()
+            self.pop_mfma_instrs(auto_fill=False)
 
     def store_C(self):
         self.write_line('s_mov_b32     s84, roundMaskVal')

@@ -907,7 +907,8 @@ class MACOperator(KernGenerator):
         # head
         # a: 16, b: 8, mfma: 16
         self.calc_interleave_info()
-        load_C_cb = partial(self.pop_load_instrs, 2)
+        #load_C_cb = partial(self.pop_load_instrs, 1)
+        load_C_cb = None
 
         self.barrier(cmt='A[0] is ready', nl=True)
         self.read_A(False)
@@ -1029,7 +1030,7 @@ class MACOperator(KernGenerator):
 
         for i in range(self.num_mfma_blocks):
             self.pop_mfma_instrs(auto_fill=False)
-            load_instr_cnt = self.pop_load_instrs(4)
+            #load_instr_cnt = self.pop_load_instrs(4)
             self.pop_mfma_instrs(auto_fill=False)
             self.empty_line()
 

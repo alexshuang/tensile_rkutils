@@ -1,5 +1,5 @@
 # Tensile Replacement Kernel Development Utils
-utils support mi100 replacement kernel develop & perf, including kernel generation, compiler collection, build and perf.
+utils support AMD replacement kernel develop & perf, including kernel generation, compiler collection, build and perf.
 
 - **rkgen**&emsp;&emsp;generate replacement kernel template: \*.sp3.
 - **sp3cc**&emsp;&emsp;compile \*.sp3 to \*.inc

@@ -1,5 +1,5 @@
 # Tensile Replacement Kernel Development Utils
-utils support AMD replacement kernel develop & perf, including kernel generation, compiler collection, build and perf.
+ROCm tensile replacement kernel development utils.
 
 - **rkgen**&emsp;&emsp;generate replacement kernel template: \*.sp3.
 - **sp3cc**&emsp;&emsp;compile \*.sp3 to \*.inc
@@ -23,7 +23,7 @@ utils support AMD replacement kernel develop & perf, including kernel generation
 - $ cd 1_BenchmarkProblems/\*/00_Final/source/assembly
 - $ rkbuild <*path/to/\*.inc*>
 
-### Perf
+### Testing
 - $ cd 1_BenchmarkProblems/\*/00_Final/build
 - $ rkperf -g conf.json  &emsp; # Create profile
 - Modify problem sizes in conf.json
